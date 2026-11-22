@@ -50,11 +50,13 @@
     if (latest) { const d = new Date(latest); pill.hidden = false; pill.innerHTML = `Updated <span>${d.getDate()} ${d.toLocaleString('en-GB', { month: 'short' })}</span>`; }
   }
   const fin = m => m ? m.s[2] : null;
+  const LV = []; for (let l = 1, t = 0; l <= 100; l++) LV.push(t += [3, 4, 6, 8, 10, 12, 15, 18, 25, 30][Math.floor((l - 1) / 10)]);
+  const level = v => { let l = 0; while (l < LV.length && v >= LV[l]) l++; return l; };
   const val = (x, k) => k === 'name' ? x.name : k === 'ally' ? x.ally : fin(x.m[months[+k.slice(1)]]);
   function cell(m) {
     if (!m) return `<td class="ks hs0 none">—</td>`;
     const c = m.s[2];
-    return `<td class="ks"><span class="kv${c == null ? ' nod7' : ''}">${c ?? '—'}</span></td>`;
+    return `<td class="ks"><span class="kv${c == null ? ' nod7' : ''}">${c ?? '—'}</span>${c == null ? '' : `<span class="klv">Level ${level(c)}</span>`}</td>`;
   }
   const short = m => { const x = /^([A-Z][a-z]{2})(\d\d)$/.exec(m); return x ? x[1] + ' ' + x[2] : m; };
   let gid = 0;
@@ -89,7 +91,7 @@
     const last = scored[0], prev = scored[1], lv = last ? fin(x.m[last]) : null, ch = prev ? lv - fin(x.m[prev]) : null;
     const badge = !ch ? '' : `<span class="kch ${ch > 0 ? 'up' : 'down'}">${ch > 0 ? '▲ ' + ch : '▼ ' + -ch}</span>`;
     const head = `<div class="khead"><div class="kbig"><b>${lv ?? '—'}</b>${badge}<small>${last ? monName(last) : 'No Day 7 score yet'}</small></div>` +
-      (best ? `<div class="kbest"><b>${best[0]}</b><span>Best score · ${monName(best[1])}</span></div>` : '') + `</div>`;
+      (best ? `<div class="kbest"><b>Level ${level(best[0])}</b><span>Highest level cleared</span></div>` : '') + `</div>`;
     return `<div class="detin" style="width:${avail}px">${head}${chart(x)}</div>`;
   }
   function draw() {
