@@ -124,96 +124,154 @@ async function kzFill(sightings, times, duration, file, usage) {
   return { asked: missing, found: new Set(got.map(r => r.rank)).size, rows: got };
 }
 
-const KR = { job: 0, list: [], box: null, step: 26, at: new Map(), cache: new Map(), i: -1 };
-function krTimes(frames, seen) {
-  const at = new Map(), T = frames.times || [], per = KZ.perImage, byImg = new Map();
+const KR = { job: 0, cards: null };
+function krBands(im) {
+  const w = krW(im), h = krH(im), cw = Math.round(w * .66);
+  const c = Object.assign(document.createElement('canvas'), { width: cw, height: h });
+  const x = c.getContext('2d', { willReadFrequently: true });
+  x.drawImage(im, 0, 0, cw, h, 0, 0, cw, h);
+  const d = x.getImageData(0, 0, cw, h).data, pr = new Float32Array(h);
+  for (let y = 0; y < h; y++) { let t = 0; for (let q = 0; q < cw; q += 2) { const i = (y * cw + q) * 4; t += d[i] + d[i + 1] + d[i + 2]; } pr[y] = t; }
+  const mean = pr.reduce((a, b) => a + b, 0) / h, ac = [];
+  for (let p = Math.round(h * .06); p <= Math.round(h * .4); p++) { let s = 0; for (let y = 0; y + p < h; y++) s += (pr[y] - mean) * (pr[y + p] - mean); ac.push([s / (h - p), p]); }
+  const top = Math.max(...ac.map(q => q[0]));
+  const P = (ac.find((q, i) => i > 0 && i < ac.length - 1 && q[0] >= ac[i - 1][0] && q[0] >= ac[i + 1][0] && q[0] >= top * .6) || ac[0])[1];
+  const half = Math.round(P * .35), e = [];
+  for (let y = 1; y < h - 1; y++) {
+    let low = true;
+    for (let q = Math.max(0, y - half); q <= Math.min(h - 1, y + half) && low; q++) if (pr[q] < pr[y]) low = false;
+    if (low && pr[y] < mean && (!e.length || y - e[e.length - 1] > P * .6)) e.push(y);
+  }
+  const out = [];
+  if (e.length < 2) return { w, h, P, cards: out };
+  const gaps = e.slice(1).map((y, k) => y - e[k]).filter(g => g > P * .85 && g < P * 1.15).sort((a, b) => a - b);
+  if (!gaps.length) return { w, h, P, cards: out };
+  const Q = gaps[gaps.length >> 1];
+  const ph = e.map(y => ((y % Q) + Q) % Q).sort((a, b) => a - b), o = ph[ph.length >> 1];
+  const on = y => { let d = ((y - o) % Q + Q) % Q; d = Math.min(d, Q - d); return d < Q * .04; };
+  const hits = e.filter(on);
+  if (hits.length < 2) return { w, h, P: Q, cards: out };
+  const near = y => hits.some(z => Math.abs(z - y) < Q * .05);
+  for (let y = o - Math.ceil(o / Q) * Q; y + Q <= h + 4; y += Q) {
+    if (y < -4) continue;
+    if (near(y) || near(y + Q)) out.push([Math.max(0, Math.round(y)), Math.min(h, Math.round(y + Q))]);
+  }
+  return { w, h, P: Q, cards: out };
+}
+const krW = im => im.naturalWidth || im.width, krH = im => im.naturalHeight || im.height;
+async function krCut(list, job) {
+  const cards = [];
+  for (const { b64, t } of list) {
+    if (!b64) continue;
+    const im = await kzImg('data:image/jpeg;base64,' + b64);
+    const b = krBands(im);
+    for (const [top, bot] of b.cards) cards.push({ t, im, top, bot, w: b.w, h: b.h, mid: Math.abs((top + bot) / 2 - b.h / 2) / b.h });
+    if (job !== KR.job) return null;
+  }
+  return cards;
+}
+async function krRead(cards, job) {
+  const TW = 150, TH = 92, LB = 24, COLS = 8, ROWS = 10, PER = COLS * ROWS, images = [];
+  for (let g = 0; g * PER < cards.length; g++) {
+    const set = cards.slice(g * PER, (g + 1) * PER), rows = Math.ceil(set.length / COLS);
+    const c = Object.assign(document.createElement('canvas'), { width: COLS * TW, height: rows * (TH + LB) });
+    const x = c.getContext('2d');
+    x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height);
+    set.forEach((cd, n) => {
+      const cx = (n % COLS) * TW, cy = Math.floor(n / COLS) * (TH + LB);
+      x.fillStyle = '#000'; x.font = 'bold 18px sans-serif'; x.fillText('#' + (g * PER + n), cx + 4, cy + 18);
+      const sw = Math.round(cd.w * .22), sh = cd.bot - cd.top, sc = Math.min((TW - 6) / sw, TH / sh);
+      x.drawImage(cd.im, 0, cd.top, sw, sh, cx + 3, cy + LB, Math.round(sw * sc), Math.round(sh * sc));
+    });
+    images.push(c.toDataURL('image/jpeg', .85).split(',')[1]);
+  }
+  const got = [];
+  for (let i = 0; i < images.length; i += 8) {
+    const r = await withFallback(model => kzPost('/kartz-labels', { model, images: images.slice(i, i + 8) }), modelChain(), () => {}, true);
+    got.push(...(r.labels || []));
+    if (job !== KR.job) return null;
+  }
+  const out = new Array(cards.length).fill(null);
+  for (const { id, rank } of got) if (id >= 0 && id < cards.length && rank > 0) out[id] = rank;
+  return out;
+}
+async function krLabel(cards, job) {
+  const order = cards.map((_, i) => i);
+  for (let i = order.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [order[i], order[j]] = [order[j], order[i]]; }
+  const [a, b] = await Promise.all([krRead(cards, job), krRead(order.map(i => cards[i]), job)]);
+  if (!a || !b || job !== KR.job) return null;
+  const twice = new Array(cards.length).fill(null);
+  order.forEach((i, n) => { twice[i] = b[n]; });
+  cards.forEach((cd, i) => { if (a[i] > 0 && a[i] === twice[i]) cd.rank = a[i]; });
+  return cards;
+}
+function krWhen(frames, seen) {
+  const at = new Map(), T = frames.times || [], per = KZ.perImage;
   for (const s of seen || []) {
     if (!(s.rank > 0) || !(s.frame >= 0)) continue;
-    if (!byImg.has(s.frame)) byImg.set(s.frame, []);
-    byImg.get(s.frame).push(s);
-  }
-  for (const [img, list] of byImg) {
-    let runs;
-    if (list.every(s => s.side === 'L' || s.side === 'R')) runs = [[list.filter(s => s.side === 'L'), 0], [list.filter(s => s.side === 'R'), 1]];
-    else {
-      let cut = list.findIndex((s, i) => i > 0 && s.rank <= list[i - 1].rank);
-      if (cut < 0) cut = per > 1 ? Math.ceil(list.length / 2) : list.length;
-      runs = [[list.slice(0, cut), 0], [list.slice(cut), 1]];
-    }
-    runs.forEach(([run, side]) => {
-      run = run.slice().sort((a, b) => a.rank - b.rank);
-      const k = img * per + Math.min(side, per - 1), t = T[k];
-      if (t == null) return;
-      run.forEach((s, i) => {
-        const off = run.length > 1 ? Math.abs(i / (run.length - 1) - .5) : .5;
-        const was = at.get(s.rank);
-        if (!was || off < was.off) at.set(s.rank, { t, off, k });
-      });
-    });
+    const k = s.frame * per + (per > 1 && s.side === 'R' ? 1 : 0), t = T[k];
+    if (t != null && !at.has(s.rank)) at.set(s.rank, t);
   }
   return at;
 }
-async function krBitmap(i) {
-  const c = KR.cache;
-  if (c.has(i)) return c.get(i);
-  const f = KR.list[i];
-  const p = f.b ? createImageBitmap(f.b) : kzImg('data:image/jpeg;base64,' + f.b64);
-  c.set(i, p);
-  if (c.size > 48) { const k = c.keys().next().value; const old = c.get(k); c.delete(k); old.then(x => x && x.close && x.close()).catch(() => {}); }
-  return p;
-}
-async function krDraw(i) {
-  i = Math.max(0, Math.min(KR.list.length - 1, i));
-  KR.i = i;
-  for (let k = 1; k <= 4; k++) { if (i + k < KR.list.length) krBitmap(i + k); if (i - k >= 0) krBitmap(i - k); }
-  const im = await krBitmap(i).catch(() => null);
-  if (!im || KR.i !== i) return;
-  const cv = $('kzRecSc').querySelector('canvas'); if (!cv) return;
-  const w = im.width || im.naturalWidth, h = im.height || im.naturalHeight, b = KR.list[i].b ? KR.box : null;
-  const sx = b ? Math.round(w * b.x0) : 0, sy = b ? Math.round(h * b.y0) : 0;
-  const sw = b ? Math.round(w * (b.x1 - b.x0)) : w, sh = b ? Math.round(h * (b.y1 - b.y0)) : h;
-  if (!KR.size) KR.size = KR.box ? null : [sw, sh];
-  if (!KR.size && b) KR.size = [sw, sh];
-  const [cw, ch] = KR.size || [sw, sh];
-  if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; }
-  cv.getContext('2d').drawImage(im, sx, sy, sw, sh, 0, 0, cw, ch);
+async function krCards(frames, seen, want, file, job) {
+  const best = new Map();
+  const keep = cards => { for (const cd of cards || []) if (cd.rank > 0) { const was = best.get(cd.rank); if (!was || cd.mid < was.mid) best.set(cd.rank, cd); } };
+  let cards = await krCut(frames.map((b64, k) => ({ b64, t: frames.times ? frames.times[k] : k })), job);
+  if (!cards) return null;
+  const total0 = cards.length;
+  keep(await krLabel(cards, job));
+  if (job !== KR.job) return null;
+  const when = krWhen(frames, seen), missing = [...want].filter(r => !best.has(r) && when.has(r));
+  let extra = 0;
+  if (missing.length && file && frames.times) {
+    const times = new Set();
+    for (const r of missing.slice(0, 20)) for (const d of [-.35, -.2, -.1, .1, .2, .35]) times.add(Math.max(0, +(when.get(r) + d).toFixed(3)));
+    const shots = (await grabStrips(file, [...times], 1)).map((x, i) => ({ b64: x[0], t: [...times][i] }));
+    if (job !== KR.job) return null;
+    const more = await krCut(shots, job);
+    if (!more) return null;
+    more.forEach(cd => { cd.mid += .5; });
+    extra = more.length;
+    keep(await krLabel(more, job));
+  }
+  return { best, total: total0 + extra };
 }
 function krJump(rank) {
-  if (!KR.list.length) return;
-  let hit = KR.at.get(rank);
-  if (!hit && KR.at.size) { let best = null; for (const [r, v] of KR.at) if (best == null || Math.abs(r - rank) < Math.abs(best[0] - rank)) best = [r, v]; hit = best[1]; }
-  if (!hit) return;
-  const L = KR.list;
-  let i = L.findIndex(f => f.k === hit.k && f.b64);
-  if (i < 0) {
-    let lo = 0, hi = L.length - 1;
-    while (hi - lo > 1) { const m = (lo + hi) >> 1; if (L[m].t <= hit.t) lo = m; else hi = m; }
-    i = Math.abs(L[hi].t - hit.t) < Math.abs(L[lo].t - hit.t) ? hi : lo;
-  }
+  const list = $('kzRecSc').querySelector('.cards'); if (!list) return;
+  const all = [...list.children];
+  let el = all.find(c => +c.dataset.r === rank);
+  if (!el) el = all.reduce((a, c) => !a || Math.abs(+c.dataset.r - rank) < Math.abs(+a.dataset.r - rank) ? c : a, null);
+  if (!el) return;
   $('kzRec').classList.remove('min'); $('kzRecHide').textContent = 'Hide';
   const sc = $('kzRecSc');
-  sc.scrollTop = i * KR.step;
-  krDraw(i);
-  requestAnimationFrame(() => { if (Math.round(sc.scrollTop / KR.step) !== i) sc.scrollTop = i * KR.step; });
+  sc.scrollTop = el.offsetTop - (sc.clientHeight - el.offsetHeight) / 2;
 }
-function krStart(frames, seen) {
-  KR.job++;
-  KR.cache.forEach(p => p.then(x => x && x.close && x.close()).catch(() => {}));
-  KR.cache = new Map(); KR.i = -1; kzRecSel = null;
-  const kept = frames.map((b64, k) => ({ t: frames.times ? frames.times[k] : k, b64, k }));
-  KR.box = frames.scrub && frames.scrub.length ? frames.scrubBox || null : null;
-  KR.list = KR.box ? frames.scrub.concat(kept).sort((a, b) => a.t - b.t) : kept;
-  KR.size = null;
-  KR.at = krTimes(frames, seen);
+async function krStart(frames, seen, want, file) {
+  const job = ++KR.job; kzRecSel = null;
   const sc = $('kzRecSc');
-  sc.innerHTML = '<div class="stage"><canvas></canvas></div><div class="spacer"></div>';
-  sc.querySelector('.spacer').style.height = ((KR.list.length - 1) * KR.step) + 'px';
-  sc.scrollTop = 0;
+  sc.innerHTML = '<p class="krwait">Preparing the cards…</p>';
   $('kzRec').classList.remove('hide', 'min'); $('kzRecHide').textContent = 'Hide';
   document.body.classList.add('hasrec');
-  krDraw(0);
+  try {
+    const r = await krCards(frames, seen, want, file, job);
+    if (!r || job !== KR.job) return;
+    const list = document.createElement('div'); list.className = 'cards';
+    for (const rank of [...r.best.keys()].sort((a, b) => a - b)) {
+      const cd = r.best.get(rank), h = cd.bot - cd.top;
+      const c = Object.assign(document.createElement('canvas'), { width: cd.w, height: h });
+      c.getContext('2d').drawImage(cd.im, 0, cd.top, cd.w, h, 0, 0, cd.w, h);
+      c.dataset.r = rank;
+      list.appendChild(c);
+    }
+    sc.replaceChildren(list);
+    log(`recording cards — ${r.best.size} players from ${r.total} card pictures`);
+  } catch (e) {
+    if (job !== KR.job) return;
+    console.log('[kartz] cards: ' + e.message);
+    $('kzRec').classList.add('hide'); document.body.classList.remove('hasrec');
+  }
 }
-$('kzRecSc').addEventListener('scroll', () => { const i = Math.round($('kzRecSc').scrollTop / KR.step); if (i !== KR.i && KR.list.length) krDraw(i); }, { passive: true });
 $('kzRecHide').onclick = () => { const m = $('kzRec').classList.toggle('min'); $('kzRecHide').textContent = m ? 'Show' : 'Hide'; };
 $('tbl').addEventListener('click', e => {
   if (e.target.closest('button, input, select, a, .field')) return;
@@ -226,7 +284,7 @@ $('tbl').addEventListener('click', e => {
 
 $('go').onclick = async () => {
   $('go').disabled = true; $('out').classList.add('hide');
-  KR.job++; KR.list = []; $('kzRec').classList.add('hide'); document.body.classList.remove('hasrec');
+  KR.job++; $('kzRec').classList.add('hide'); document.body.classList.remove('hasrec');
   const usage = { requests: 0, prompt: 0, cached: 0, output: 0, total: 0 };
   try {
     startVideoUpload(videoFile);
@@ -249,7 +307,7 @@ $('go').onclick = async () => {
     rows = matched.rows;
     (matched.notes || []).forEach(log);
     render(roster);
-    krStart(frames, seen);
+    krStart(frames, seen, new Set(rows.map(r => r.seenRank > 0 ? r.seenRank : r.rank).filter(n => n > 0)), videoFile);
     log(`done in ${((Date.now() - t0) / 1000).toFixed(0)}s — ${sightings.length} readings → ${rows.length} players`
         + (fill.asked ? ` · gap fill found ${fill.found} of ${fill.asked}` : '')
         + ` · ${Math.round(usage.total / 1000)}k tokens`);
