@@ -1,5 +1,5 @@
 
-const DC_STEP = 1 / 8;
+const DC_STEP = 1 / 8, DC_SCRUB = 1 / 12;
 const DC_LANES = Math.max(2, Math.min(4, (navigator.hardwareConcurrency || 4) >> 1));
 
 function dcBoxes(view, start, end) {
@@ -141,6 +141,11 @@ async function dcExtract(file, budget, onProg, soft = false) {
   const tcv = Object.assign(document.createElement('canvas'), { width: TW, height: TH });
   const tc = tcv.getContext('2d', { willReadFrequently: true });
 
+  const SW = Math.min(W, 360), SH = Math.round(SW * H / W);
+  const scv = Object.assign(document.createElement('canvas'), { width: SW, height: SH });
+  const sctx = scv.getContext('2d');
+  const scrub = [];
+
   const tB = performance.now();
   const keys = ix.samples.map((s, i) => (s.key ? i : -1)).filter(i => i >= 0);
   const cuts = [...new Set(Array.from({ length: DC_LANES }, (_, j) => keys[Math.floor(j * keys.length / DC_LANES)]))];
@@ -148,9 +153,14 @@ async function dcExtract(file, budget, onProg, soft = false) {
   let done1 = 0;
   await Promise.all(cuts.map((from, j) => {
     const to = j + 1 < cuts.length ? cuts[j + 1] - 1 : ix.samples.length - 1;
-    let next = 0;
+    let next = 0, nextS = 0;
     return dcDecode(file, ix, from, to, f => {
       const t = f.timestamp / 1e6;
+      if (t + 1e-6 >= nextS) {
+        nextS = t + DC_SCRUB;
+        sctx.drawImage(f, 0, 0, SW, SH);
+        scrub.push(new Promise(ok => scv.toBlob(b => ok({ t, b }), 'image/jpeg', 0.72)));
+      }
       if (t + 1e-6 < next) return;
       next = t + DC_STEP;
       cx.drawImage(f, 0, 0, W, H);
@@ -224,6 +234,8 @@ async function dcExtract(file, budget, onProg, soft = false) {
   frames.times = frameTimes;
   frames.duration = ix.duration;
   frames.mode = 'decoded';
+  frames.scrub = (await Promise.all(scrub)).filter(x => x.b).sort((a, b) => a.t - b.t);
+  frames.scrubBox = box;
   const tD = performance.now(), sec = ms => (ms / 1000).toFixed(1) + 's';
   frames.detail = `${ix.codec}, ${ix.samples.length} frames, ${DC_LANES} ${ix.accel === 'prefer-software' ? 'software' : 'hardware'} decoders — index ${sec(tB - tA)}, `
     + `pass 1 ${sec(tC - tB)}, pass 2 ${sec(tD - tC)} (${decoded2} frames in ${stretches.size} stretches)`;
