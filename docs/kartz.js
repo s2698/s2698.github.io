@@ -125,12 +125,15 @@ async function kzFill(sightings, times, duration, file, usage) {
 }
 
 const KR = { y: null, pitch: 0, job: 0 };
+const krW = im => im.naturalWidth || im.width, krH = im => im.naturalHeight || im.height;
 function krGrey(img, w, part = 0.45) {
-  const h = Math.round(img.naturalHeight * w / img.naturalWidth), sw = Math.round(img.naturalWidth * part);
+  const h = Math.round(krH(img) * w / krW(img)), sw = Math.round(krW(img) * part);
   const gw = Math.round(w * part);
-  const c = Object.assign(document.createElement('canvas'), { width: gw, height: h });
-  const x = c.getContext('2d', { willReadFrequently: true });
-  x.drawImage(img, 0, 0, sw, img.naturalHeight, 0, 0, gw, h);
+  const c = krGrey.cv || (krGrey.cv = document.createElement('canvas'));
+  if (c.width !== gw || c.height !== h) { c.width = gw; c.height = h; krGrey.cx = null; }
+  const x = krGrey.cx || (krGrey.cx = c.getContext('2d', { willReadFrequently: true }));
+  x.clearRect(0, 0, gw, h);
+  x.drawImage(img, 0, 0, sw, krH(img), 0, 0, gw, h);
   const d = x.getImageData(0, 0, gw, h).data, g = new Float32Array(gw * h);
   for (let i = 0; i < g.length; i++) g[i] = d[i * 4] * .3 + d[i * 4 + 1] * .59 + d[i * 4 + 2] * .11;
   return { g, w: gw, h };
@@ -149,7 +152,18 @@ function krShift(a, b, lo = -Infinity, hi = Infinity) {
 const krPause = () => new Promise(r => setTimeout(r, 0));
 async function krBuild(frames, file, job) {
   const shots = frames.map((b, i) => ({ b, t: frames.times ? frames.times[i] : i }));
-  const imgOf = async s => s.img || (s.img = await kzImg('data:image/jpeg;base64,' + s.b));
+  let ref = null;
+  const imgOf = async s => {
+    if (s.img) return s.img;
+    let im = await kzImg('data:image/jpeg;base64,' + s.b);
+    if (!ref) ref = [krW(im), krH(im)];
+    else if (krW(im) !== ref[0] || krH(im) !== ref[1]) {
+      const c = Object.assign(document.createElement('canvas'), { width: ref[0], height: ref[1] });
+      c.getContext('2d').drawImage(im, 0, 0, ref[0], ref[1]); im = c;
+    }
+    return s.img = im;
+  };
+  await imgOf(shots[0]);
   const small = async s => s.g || (s.g = krGrey(await imgOf(s), 240));
   for (let pass = 0; pass < 4 && frames.times; pass++) {
     const mids = [];
@@ -170,17 +184,43 @@ async function krBuild(frames, file, job) {
   }
   const imgs = [];
   for (const s of shots) imgs.push(await imgOf(s));
-  const FW = imgs[0].naturalWidth, FH = imgs[0].naturalHeight, k = FW / 240;
-  const offs = [0];
-  for (let i = 1; i < shots.length; i++) {
-    const [err, dy] = krShift(await small(shots[i - 1]), await small(shots[i]));
-    const F = [shots[i - 1], shots[i]].map(s => s.f || (s.f = krGrey(s.img, FW)));
-    const fine = err < 18 ? krShift(F[0], F[1], Math.round(dy * k) - 6, Math.round(dy * k) + 6)[1] : Math.round(FH * .8);
-    offs.push(offs[i - 1] + fine);
-    if (i > 1) shots[i - 2].f = null;
+  const FW = krW(imgs[0]), FH = krH(imgs[0]), k = FW / 240;
+  const rowsOf = f => { const p = new Float32Array(f.h); const cw = Math.round(f.w * .66); for (let y = 0; y < f.h; y++) { let t = 0; for (let q = 0; q < cw; q += 2) t += f.g[y * f.w + q]; p[y] = t; } return p; };
+  const steps = [null], profs = [];
+  for (let i = 0; i < shots.length; i++) {
+    const F = krGrey(shots[i].img, FW);
+    profs.push(rowsOf(F));
+    if (i) {
+      const [err, dy] = krShift(await small(shots[i - 1]), await small(shots[i]));
+      steps.push(err < 15 ? krShift(shots[i - 1].f, F, Math.round(dy * k) - 6, Math.round(dy * k) + 6)[1] : null);
+      shots[i - 1].f = null;
+    }
+    shots[i].f = F;
     await krPause();
     if (job !== KR.job) return;
   }
+  shots[shots.length - 1].f = null;
+  const speeds = [];
+  for (let i = 1; i < shots.length; i++) if (steps[i] != null && shots[i].t > shots[i - 1].t) speeds.push(steps[i] / (shots[i].t - shots[i - 1].t));
+  speeds.sort((a, b) => a - b);
+  const speed = speeds.length ? speeds[speeds.length >> 1] : FH * .8;
+  let guessed = 0;
+  for (let i = 1; i < shots.length; i++) if (steps[i] == null) { guessed++; steps[i] = Math.round(Math.min(FH * 1.5, Math.max(FH * .3, speed * Math.max(.05, shots[i].t - shots[i - 1].t)))); }
+  const p0 = profs[0], m0 = p0.reduce((a, b) => a + b, 0) / p0.length;
+  let pb = [-Infinity, 0];
+  for (let p = 80; p <= 260; p++) { let s = 0; for (let y = 0; y + p < p0.length; y++) s += (p0[y] - m0) * (p0[y + p] - m0); s /= p0.length - p; if (s > pb[0]) pb = [s, p]; }
+  const P = pb[1];
+  const phase = pr => { let b = [Infinity, 0]; for (let ph = 0; ph < P; ph++) { let s = 0, n = 0; for (let y = ph; y < pr.length; y += P) { s += pr[y]; n++; } s /= n; if (s < b[0]) b = [s, ph]; } return b[1]; };
+  const ph = profs.map(phase);
+  const offs = [0];
+  for (let i = 1; i < shots.length; i++) {
+    let o = offs[i - 1] + steps[i];
+    let d = ((offs[i - 1] + ph[i - 1]) - (o + ph[i])) % P;
+    if (d > P / 2) d -= P; if (d < -P / 2) d += P;
+    if (Math.abs(d) > 4) o += d;
+    offs.push(o);
+  }
+  KR.info = `${shots.length} frames${shots.length > frames.length ? ` (${shots.length - frames.length} added)` : ''}, ${guessed} joins estimated, card ${P}px`;
   const top = Math.min(0, ...offs), total = Math.max(...offs) + FH - top;
   const scale = Math.min(640 / FW, Math.sqrt(15e6 / (FW * total)), 1);
   const W = Math.round(FW * scale), c = Object.assign(document.createElement('canvas'), { width: W, height: Math.round(total * scale) });
@@ -218,6 +258,7 @@ async function krBuild(frames, file, job) {
   KR.y = rank => rank < edges.length ? (edges[rank - 1] + edges[rank]) / 2 : edges[edges.length - 1] + (rank - edges.length + .5) * pitch;
   $('kzRecSc').replaceChildren(c);
   $('kzRecNote').textContent = 'tap a row to find it';
+  log('recording joined — ' + KR.info);
 }
 function krJump(rank) {
   if (!KR.y) return;

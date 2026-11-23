@@ -910,9 +910,14 @@ async function openVideo(file) {
       + 'video format. Open the site in Safari, on the phone that recorded it, or in Chrome or Edge on a Mac.');
   return video;
 }
+const SAFARI = /^((?!chrome|android|crios|fxios|edg).)*safari/i.test(navigator.userAgent);
 const seek = async (video, t) => {
+  const shown = SAFARI && video.requestVideoFrameCallback
+    ? new Promise(r => { const k = setTimeout(r, 400); video.requestVideoFrameCallback(() => { clearTimeout(k); r(); }); })
+    : null;
   video.currentTime = t;
   await Promise.race([once(video, 'seeked'), new Promise(r => setTimeout(r, 1500))]);
+  if (shown) await shown;
 };
 
 let lastCropBox = null;
@@ -1700,7 +1705,7 @@ $('toBottom').onclick = () => scrollTo({ top: document.documentElement.scrollHei
 loadSetup();
 </script>
 <script src="decode.js?v=4"></script>
-<script src="kartz.js?v=8"></script>
+<script src="kartz.js?v=9"></script>
 <script src="hit.js?v=1" data-page="kartz"></script>
 </body>
 </html>
