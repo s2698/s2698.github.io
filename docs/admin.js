@@ -643,10 +643,11 @@ window.Admin = (function () {
   async function signupsPage() {
     const ch = store.get('su:channel') || '';
     view.innerHTML = `<div class="apanel"><h2>New Discord sign-up</h2>
-      <p class="ahint">The bot posts this in the Discord channel with Sign up, Withdraw and Who's in buttons. Players pick their name from the alliance rosters and their alliance is filled in from there.</p>
+      <p class="ahint">The bot posts this in the Discord channel with one button per option (up to 5, separated by commas), plus Withdraw and Who's in. Players pick their name from the alliance rosters and their alliance is filled in from there. Maybe and Not available don't count towards the max per alliance.</p>
       <div class="alist">
         <div class="ali"><span class="alab">Title</span><input type="text" data-s="title" maxlength="120" placeholder="Neutral City battle · Saturday" class="long"></div>
         <div class="ali"><span class="alab">Details</span><input type="text" data-s="details" maxlength="1500" placeholder="What to bring, when to be online…" class="long"></div>
+        <div class="ali"><span class="alab">Options</span><input type="text" data-s="opts" maxlength="200" value="${esc(store.get('su:opts') || 'MM, CE, Maybe, Not available')}" class="long"></div>
         <div class="ali"><span class="alab">Sign-ups close</span><input type="datetime-local" data-s="closes"></div>
         <div class="ali"><span class="alab">Max per alliance</span><input type="number" data-s="cap" min="0" max="500" placeholder="no limit" class="short"></div>
         <div class="ali"><span class="alab">Discord channel ID</span><input type="text" data-s="channel" value="${esc(ch)}" placeholder="e.g. 1234567890123456789" class="long"></div>
@@ -660,7 +661,7 @@ window.Admin = (function () {
       try {
         const { events } = await A.call('su-list');
         if (page !== 'signups') return;
-        box.innerHTML = events.length ? `<div class="alist">${events.map(e => `<div class="ali wrapline"><span class="alab" style="width:auto;flex:1"><b>${esc(e.title)}</b><br><span class="ahint" style="margin:0">${e.total} signed up · ${Object.entries(e.counts).map(([a, n]) => `${esc(a)} ${n}${e.cap ? '/' + e.cap : ''}`).join(' · ')} · ${e.closed ? 'closed' : 'closes ' + esc(tm(e.closes))}</span></span>
+        box.innerHTML = events.length ? `<div class="alist">${events.map(e => `<div class="ali wrapline"><span class="alab" style="width:auto;flex:1"><b>${esc(e.title)}</b><br><span class="ahint" style="margin:0">${(e.byOpt || []).map(([o, n]) => `${esc(o)} ${n}`).join(' · ')}<br>${Object.entries(e.counts).map(([a, n]) => `${esc(a)} ${n}${e.cap ? '/' + e.cap : ''}`).join(' · ')} · ${e.closed ? 'closed' : 'closes ' + esc(tm(e.closes))}</span></span>
           ${e.closed ? '' : `<button type="button" class="abtn sm" data-sclose="${esc(e.id)}">Close now</button>`}<button type="button" class="abtn sm" data-sdel="${esc(e.id)}">Delete</button></div>`).join('')}</div>`
           : '<p class="ahint" style="margin:0">No sign-ups yet.</p>';
       } catch (x) { box.innerHTML = `<p class="aerr">${esc(x.message)}</p>`; }
@@ -672,8 +673,8 @@ window.Admin = (function () {
         const closes = v('closes') ? new Date(v('closes')).getTime() : 0;
         btn.disabled = true; err.textContent = '';
         try {
-          await A.call('su-create', { title: v('title'), details: v('details'), closes, cap: Number(v('cap')) || 0, channel: v('channel') });
-          store.set('su:channel', v('channel'));
+          await A.call('su-create', { title: v('title'), details: v('details'), opts: v('opts'), closes, cap: Number(v('cap')) || 0, channel: v('channel') });
+          store.set('su:channel', v('channel')); store.set('su:opts', v('opts'));
           toast('Posted to Discord');
           view.querySelector('[data-s="title"]').value = ''; view.querySelector('[data-s="details"]').value = '';
           list();
