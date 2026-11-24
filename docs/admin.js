@@ -241,7 +241,7 @@ window.Admin = (function () {
   }
   applyHome();
 
-  const PAGES = [['cols', 'Cards & rules'], ['home', 'Home page'], ['sheets', 'Sheets & rounds'], ['history', 'History'], ['visitors', 'Visitors']];
+  const PAGES = [['cols', 'Cards & rules'], ['home', 'Home page'], ['sheets', 'Sheets & rounds'], ['signups', 'Sign-ups'], ['history', 'History'], ['visitors', 'Visitors']];
   let page = 'cols', log = null;
   const sec = { cols: 'wb', sheets: 'overview' }, openRules = new Set();
   const GROUPS = [
@@ -276,7 +276,7 @@ window.Admin = (function () {
     }
     tabs.innerHTML = PAGES.map(([k, l]) => `<button type="button" class="rchip ${page === k ? 'on' : ''}" data-pg="${k}">${l}</button>`).join('');
     view.onchange = view.onclick = null;
-    ({ cols: colsPage, home: homePage, sheets: sheetsPage, history: historyPage, visitors: visitorsPage })[page]();
+    ({ cols: colsPage, home: homePage, sheets: sheetsPage, signups: signupsPage, history: historyPage, visitors: visitorsPage })[page]();
   }
   if (tabs) tabs.onclick = e => { const b = e.target.closest('[data-pg]'); if (b) { page = b.dataset.pg; drawPage(); } };
   if (view) {
@@ -640,6 +640,53 @@ window.Admin = (function () {
   let vRange = '7', vData = null;
   const num = n => Number(n || 0).toLocaleString('en-US');
   const hourName = h => `${h % 12 || 12} ${h < 12 ? 'AM' : 'PM'}`;
+  async function signupsPage() {
+    const ch = store.get('su:channel') || '';
+    view.innerHTML = `<div class="apanel"><h2>New Discord sign-up</h2>
+      <p class="ahint">The bot posts this in the Discord channel with Sign up, Withdraw and Who's in buttons. Players pick their name from the alliance rosters and their alliance is filled in from there.</p>
+      <div class="alist">
+        <div class="ali"><span class="alab">Title</span><input type="text" data-s="title" maxlength="120" placeholder="Neutral City battle · Saturday" class="long"></div>
+        <div class="ali"><span class="alab">Details</span><input type="text" data-s="details" maxlength="1500" placeholder="What to bring, when to be online…" class="long"></div>
+        <div class="ali"><span class="alab">Sign-ups close</span><input type="datetime-local" data-s="closes"></div>
+        <div class="ali"><span class="alab">Max per alliance</span><input type="number" data-s="cap" min="0" max="500" placeholder="no limit" class="short"></div>
+        <div class="ali"><span class="alab">Discord channel ID</span><input type="text" data-s="channel" value="${esc(ch)}" placeholder="e.g. 1234567890123456789" class="long"></div>
+      </div>
+      <p class="aerr" data-serr></p>
+      <div class="arow"><button type="button" class="abtn pri" data-spost>Post to Discord</button></div></div>
+      <div class="apanel"><h2>Sign-ups</h2><div data-slist><p class="ahint">Loading…</p></div></div>`;
+    const tm = t => t ? new Date(t).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : 'no closing time';
+    const list = async () => {
+      const box = view.querySelector('[data-slist]'); if (!box) return;
+      try {
+        const { events } = await A.call('su-list');
+        if (page !== 'signups') return;
+        box.innerHTML = events.length ? `<div class="alist">${events.map(e => `<div class="ali wrapline"><span class="alab" style="width:auto;flex:1"><b>${esc(e.title)}</b><br><span class="ahint" style="margin:0">${e.total} signed up · ${Object.entries(e.counts).map(([a, n]) => `${esc(a)} ${n}${e.cap ? '/' + e.cap : ''}`).join(' · ')} · ${e.closed ? 'closed' : 'closes ' + esc(tm(e.closes))}</span></span>
+          ${e.closed ? '' : `<button type="button" class="abtn sm" data-sclose="${esc(e.id)}">Close now</button>`}<button type="button" class="abtn sm" data-sdel="${esc(e.id)}">Delete</button></div>`).join('')}</div>`
+          : '<p class="ahint" style="margin:0">No sign-ups yet.</p>';
+      } catch (x) { box.innerHTML = `<p class="aerr">${esc(x.message)}</p>`; }
+    };
+    view.onclick = async e => {
+      const err = view.querySelector('[data-serr]');
+      if (e.target.closest('[data-spost]')) {
+        const v = k => view.querySelector(`[data-s="${k}"]`).value.trim(), btn = e.target.closest('[data-spost]');
+        const closes = v('closes') ? new Date(v('closes')).getTime() : 0;
+        btn.disabled = true; err.textContent = '';
+        try {
+          await A.call('su-create', { title: v('title'), details: v('details'), closes, cap: Number(v('cap')) || 0, channel: v('channel') });
+          store.set('su:channel', v('channel'));
+          toast('Posted to Discord');
+          view.querySelector('[data-s="title"]').value = ''; view.querySelector('[data-s="details"]').value = '';
+          list();
+        } catch (x) { err.textContent = x.message; }
+        btn.disabled = false;
+        return;
+      }
+      const c = e.target.closest('[data-sclose]'), d = e.target.closest('[data-sdel]');
+      if (c) { try { await A.call('su-close', { id: c.dataset.sclose }); toast('Sign-ups closed'); list(); } catch (x) { toast(x.message); } }
+      if (d && confirm('Delete this sign-up and its Discord post? This cannot be undone.')) { try { await A.call('su-remove', { id: d.dataset.sdel }); toast('Deleted'); list(); } catch (x) { toast(x.message); } }
+    };
+    list();
+  }
   async function visitorsPage() {
     const seg = `<div class="aseg">${RANGES.map(([k, l]) => `<button type="button" class="${k === vRange ? 'on' : ''}" data-vr="${k}">${l}</button>`).join('')}</div>`;
     const top = head('Admin · Visitors', "Who's using the site", seg);
