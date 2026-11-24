@@ -643,7 +643,7 @@ window.Admin = (function () {
   async function signupsPage() {
     const ch = store.get('su:channel') || '';
     view.innerHTML = `<div class="apanel"><h2>New Discord sign-up</h2>
-      <p class="ahint">The bot posts this in the Discord channel with one button per option (up to 5, separated by commas), plus Withdraw and Who's in. Players pick their name from the alliance rosters and their alliance is filled in from there. Maybe and Not available don't count towards the max per alliance.</p>
+      <p class="ahint">The bot posts this in the Discord channel with one button per option (up to 5, separated by commas), plus Cancel sign-up. Players are matched to the alliance rosters. Maybe and Not available don't count towards the max per alliance. Officers without the admin password can use the <a href="#signups">Sign-ups page</a>.</p>
       <div class="alist">
         <div class="ali"><span class="alab">Title</span><input type="text" data-s="title" maxlength="120" placeholder="Neutral City battle · Saturday" class="long"></div>
         <div class="ali"><span class="alab">Details</span><input type="text" data-s="details" maxlength="1500" placeholder="What to bring, when to be online…" class="long"></div>

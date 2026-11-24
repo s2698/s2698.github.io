@@ -15,6 +15,8 @@
 </style>
 <script>
 if (location.hash === '#kartz') location.replace('kartz.html');
+addEventListener('hashchange', () => { if (location.hash === '#signups') location.replace('signups.html'); });
+if (location.hash === '#signups') location.replace('signups.html');
 try { const s = JSON.parse(localStorage.getItem('site.settings')); if (!(s && s.cards && s.cards.ma && s.home && s.home.cards && s.home.cards.length)) throw 0; }
 catch { document.documentElement.classList.add('homewait'); setTimeout(() => document.documentElement.classList.remove('homewait'), 4000); }
 document.documentElement.classList.toggle('evonly', location.hash === '#events');
@@ -976,7 +978,7 @@ $('toBottom').onclick = () => scrollTo({ top: document.documentElement.scrollHei
 <script src="last.js?v=2"></script>
 <script src="hit.js?v=1"></script>
 <script src="nav.js?v=6"></script>
-<script src="admin.js?v=30"></script>
+<script src="admin.js?v=31"></script>
 <script src="cards.js?v=28"></script>
 <script src="points.js?v=7"></script>
 <script src="kscores.js?v=13"></script>

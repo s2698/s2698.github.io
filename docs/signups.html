@@ -1,0 +1,189 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Discord Sign-ups</title>
+<link rel="icon" href="icon.png">
+<link rel="stylesheet" href="fonts.css?v=1">
+<script src="theme.js?v=7"></script>
+<script>try { history.replaceState(null, '', './#signups'); } catch (e) {}</script>
+<style>
+:root{--bg:#eef4f9;--card:#fff;--ink:#14212e;--dim:#62748a;--line:#dbe5ee;--head:#f4f8fb;--acc:#5865f2;--bad:#b42318;--ok:#1f7a3a;
+  --band1:#1e1f5c;--band2:#5865f2;--band3:#a3abff;
+  --sB:#f6e3f9;--sF:#8a2a9c;--nB:#e2ecfd;--nF:#2457b3;--wB:#e2f4ea;--wF:#1f7a3a;--cB:#fbeedd;--cF:#9a5a0c;color-scheme:light}
+@media (prefers-color-scheme: dark){:root:not([data-theme]){--bg:#0d151d;--card:#15212c;--ink:#e6eef5;--dim:#8ea2b5;--line:#243444;--head:#1a2835;--acc:#8b95ff;--bad:#ff8a80;--ok:#7fd99a;
+  --sB:#3b2340;--sF:#e9a8ff;--nB:#22324f;--nF:#9ec5ff;--wB:#203d33;--wF:#7ee2a8;--cB:#45321b;--cF:#ffc078;color-scheme:dark}}
+:root:is([data-theme="dark"],[data-theme="ash"],[data-theme="sunset"]){--bg:#0d151d;--card:#15212c;--ink:#e6eef5;--dim:#8ea2b5;--line:#243444;--head:#1a2835;--acc:#8b95ff;--bad:#ff8a80;--ok:#7fd99a;
+  --sB:#3b2340;--sF:#e9a8ff;--nB:#22324f;--nF:#9ec5ff;--wB:#203d33;--wF:#7ee2a8;--cB:#45321b;--cF:#ffc078;color-scheme:dark}
+:root[data-theme="banana"]{--bg:#fff1a8;--card:#fffbe3;--ink:#2b2510;--dim:#75682f;--line:#eedd88;--head:#fff6c8}
+:root[data-theme="ash"]{--bg:#323339;--card:#3a3b41;--ink:#eceef1;--dim:#a0a5ad;--line:#46474e;--head:#36373d}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.45 Selawik,system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;-webkit-font-smoothing:antialiased}
+.band{background:linear-gradient(135deg,var(--band1),var(--band2) 60%,var(--band3));color:#fff;padding:22px 16px 18px}
+.band .in,.wrap{max-width:980px;margin:0 auto}
+.band h1{margin:0;font-size:24px}
+.band p{margin:4px 0 0;opacity:.85}
+.homelink{display:inline-flex;align-items:center;gap:6px;margin:0 0 10px;padding:4px 12px 4px 10px;border-radius:999px;font-size:13px;font-weight:600;color:#fff;
+  text-decoration:none;background:rgba(255,255,255,.16);border:1px solid rgba(255,255,255,.35)}
+.homelink:hover{background:rgba(255,255,255,.26)}
+.wrap{padding:16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:14px}
+.card h2{margin:0 0 4px;font-size:16px}
+.hint{color:var(--dim);font-size:13px;margin:0 0 12px}
+.form{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 14px}
+.form label{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);min-width:0}
+.form label.full{grid-column:1/-1}
+.form small{text-transform:none;letter-spacing:0;font-weight:400}
+input,textarea{font:inherit;font-size:14px;color:var(--ink);background:var(--head);border:1px solid var(--line);border-radius:8px;padding:8px 10px;width:100%;min-width:0}
+textarea{resize:vertical;min-height:64px}
+input:focus,textarea:focus{outline:2px solid var(--acc);outline-offset:-1px}
+@media (max-width:640px){.form{grid-template-columns:1fr}}
+button{font:inherit;font-weight:600;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:8px;padding:7px 12px;cursor:pointer}
+button.pri{background:var(--acc);border-color:var(--acc);color:#fff}
+button.sm{padding:4px 10px;font-size:13px}
+button.danger{color:var(--bad)}
+button:disabled{opacity:.55;cursor:default}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:12px}
+.row .grow{flex:1}
+.err{color:var(--bad);font-size:13px;min-height:1em;margin:8px 0 0}
+.lock{max-width:380px;margin:30px auto}
+.lock .row{margin-top:10px}
+.ev{padding:0;overflow:hidden}
+.evh{display:flex;gap:10px;align-items:flex-start;padding:14px 16px 10px;flex-wrap:wrap}
+.evh .t{flex:1;min-width:200px}
+.evh h3{margin:0;font-size:16px}
+.evh .m{color:var(--dim);font-size:13px;margin-top:2px}
+.pill{font-size:12px;font-weight:700;border-radius:999px;padding:2px 9px;background:color-mix(in srgb,var(--ok) 15%,transparent);color:var(--ok);white-space:nowrap}
+.pill.off{background:var(--head);color:var(--dim)}
+.tally{display:flex;gap:6px;flex-wrap:wrap;padding:0 16px 12px}
+.tally span{font-size:12.5px;font-variant-numeric:tabular-nums;border-radius:8px;padding:3px 9px;font-weight:700}
+.opts{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));border-top:1px solid var(--line)}
+.opt{padding:12px 16px;border-right:1px solid var(--line);border-bottom:1px solid var(--line);min-width:0}
+.opt h4{margin:0 0 8px;font-size:13px;display:flex;justify-content:space-between;gap:8px}
+.opt h4 b{font-variant-numeric:tabular-nums;color:var(--dim)}
+.opt.q h4{color:var(--dim)}
+.al{margin:0 0 8px}
+.al:last-child{margin:0}
+.tag{display:inline-block;font-size:11.5px;font-weight:700;border-radius:6px;padding:1px 7px;margin-bottom:3px}
+.t698S{background:var(--sB);color:var(--sF)}.t698N{background:var(--nB);color:var(--nF)}.t698W{background:var(--wB);color:var(--wF)}.t698C{background:var(--cB);color:var(--cF)}
+.al ul{list-style:none;margin:0;padding:0;columns:2;column-gap:12px;font-size:13.5px}
+.al li{break-inside:avoid;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.none{color:var(--dim);font-size:13px}
+.evf{display:flex;gap:8px;justify-content:flex-end;padding:10px 16px;background:var(--head)}
+.toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:999px;font-weight:600;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none}
+.toast.on{opacity:1}
+[hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="band"><div class="in">
+  <a class="homelink" href="./"><span aria-hidden="true">←</span>Home</a>
+  <h1>Discord sign-ups</h1>
+  <p>Post a sign-up to Discord and see who's in</p>
+</div></div>
+<div class="wrap">
+  <div class="card lock" id="lock" hidden>
+    <h2>Officers only</h2>
+    <p class="hint">Enter the sign-ups password.</p>
+    <input type="password" id="pass" autocomplete="current-password" placeholder="Password">
+    <div class="row"><button type="button" class="pri" id="unlock">Unlock</button></div>
+    <p class="err" id="lockerr"></p>
+  </div>
+  <div id="main" hidden>
+    <div class="card">
+      <h2>New sign-up</h2>
+      <p class="hint">The bot posts this in the Discord channel with one button per option and a Cancel sign-up button. Players are matched to the alliance rosters. Maybe and Not available don't count towards the max per alliance.</p>
+      <div class="form">
+        <label class="full">Title<input type="text" id="f-title" maxlength="120" placeholder="Neutral City battle · Saturday"></label>
+        <label class="full">Details<textarea id="f-details" maxlength="1500" placeholder="What to bring, when to be online…"></textarea></label>
+        <label class="full">Options <small>up to 5, separated by commas</small><input type="text" id="f-opts" maxlength="200"></label>
+        <label>Sign-ups close<input type="datetime-local" id="f-closes"></label>
+        <label>Max per alliance<input type="number" id="f-cap" min="0" max="500" placeholder="No limit"></label>
+        <label class="full">Discord channel ID<input type="text" id="f-channel" inputmode="numeric" placeholder="e.g. 1234567890123456789"></label>
+      </div>
+      <p class="err" id="formerr"></p>
+      <div class="row"><button type="button" class="pri" id="post">Post to Discord</button></div>
+    </div>
+    <div class="row" style="margin:0 0 10px"><b class="grow" style="font-size:15px">Sign-ups</b><button type="button" class="sm" id="refresh">Refresh</button><button type="button" class="sm" id="out">Lock</button></div>
+    <div id="list"><div class="card"><p class="none" style="margin:0">Loading…</p></div></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<script>
+(function () {
+  const API = location.hostname.endsWith('.workers.dev') ? '/api' : 'https://data-collection.jk06nm04.workers.dev/api';
+  const ALLY = ['698S', '698N', '698W', '698C'];
+  const $ = id => document.getElementById(id);
+  const get = k => { try { return localStorage.getItem(k) || ''; } catch { return ''; } };
+  const set = (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch {} };
+  const esc = s => String(s == null ? '' : s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const quiet = o => /maybe|not\s*avail|unavail|^no$/i.test(o);
+  const when = t => t ? new Date(t).toLocaleString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '';
+  let tt;
+  const toast = m => { const t = $('toast'); t.textContent = m; t.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('on'), 2200); };
+  async function call(op, body) {
+    const r = await fetch(API + '/signups', { method: 'POST', headers: { 'content-type': 'application/json', 'x-signup-pass': get('su:pass') }, body: JSON.stringify({ op, ...body }) });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw Object.assign(new Error(j.error || 'The Worker answered ' + r.status), { status: r.status });
+    return j;
+  }
+  function locked(msg) { set('su:pass', ''); $('main').hidden = true; $('lock').hidden = false; $('lockerr').textContent = msg || ''; $('pass').focus(); }
+  function draw(events) {
+    if (!events.length) { $('list').innerHTML = '<div class="card"><p class="none" style="margin:0">No sign-ups yet.</p></div>'; return; }
+    $('list').innerHTML = events.map(e => {
+      const shut = e.closed || (e.closes && Date.now() > e.closes);
+      const people = e.people || (e.byOpt || []).map(([o]) => [o, []]);
+      const opts = people.map(([o, ps]) => {
+        const groups = ALLY.map(a => [a, ps.filter(p => p[1] === a).map(p => p[0]).sort((x, y) => x.localeCompare(y))]).filter(g => g[1].length);
+        return `<div class="opt${quiet(o) ? ' q' : ''}"><h4>${esc(o)}<b>${ps.length}</b></h4>${groups.length ? groups.map(([a, ns]) =>
+          `<div class="al"><span class="tag t${a}">${a} · ${ns.length}</span><ul>${ns.map(n => `<li title="${esc(n)}">${esc(n)}</li>`).join('')}</ul></div>`).join('') : '<p class="none" style="margin:0">Nobody yet</p>'}</div>`;
+      }).join('');
+      const tally = ALLY.map(a => `<span class="t${a}">${a} ${e.counts[a] || 0}${e.cap ? ' / ' + e.cap : ''}</span>`).join('');
+      return `<div class="card ev"><div class="evh"><div class="t"><h3>${esc(e.title)}</h3><div class="m">${e.closes ? (shut ? 'Closed ' : 'Closes ') + esc(when(e.closes)) : e.closed ? 'Closed' : 'No closing time'} · ${e.total} replied</div></div>
+        <span class="pill${shut ? ' off' : ''}">${shut ? 'Closed' : 'Open'}</span></div>
+        <div class="tally">${tally}</div><div class="opts">${opts}</div>
+        <div class="evf">${shut ? '' : `<button type="button" class="sm" data-close="${esc(e.id)}">Close now</button>`}<button type="button" class="sm danger" data-del="${esc(e.id)}">Delete</button></div></div>`;
+    }).join('');
+  }
+  async function load() {
+    try { draw((await call('su-list')).events); }
+    catch (e) { if (e.status === 403) return locked(e.message); $('list').innerHTML = `<div class="card"><p class="err" style="margin:0">${esc(e.message)}</p></div>`; }
+  }
+  function open() { $('lock').hidden = true; $('main').hidden = false; load(); }
+  $('f-opts').value = get('su:opts') || 'MM, CE, Maybe, Not available';
+  $('f-channel').value = get('su:channel');
+  $('unlock').onclick = async () => {
+    const p = $('pass').value.trim(); if (!p) return;
+    $('unlock').disabled = true; $('lockerr').textContent = '';
+    set('su:pass', p);
+    try { const r = await call('su-list'); $('pass').value = ''; open(); draw(r.events); }
+    catch (e) { locked(e.message); }
+    $('unlock').disabled = false;
+  };
+  $('pass').onkeydown = e => { if (e.key === 'Enter') $('unlock').click(); };
+  $('out').onclick = () => locked('');
+  $('refresh').onclick = load;
+  $('post').onclick = async () => {
+    const v = id => $('f-' + id).value.trim(), btn = $('post');
+    btn.disabled = true; $('formerr').textContent = '';
+    try {
+      await call('su-create', { title: v('title'), details: v('details'), opts: v('opts'), closes: v('closes') ? new Date(v('closes')).getTime() : 0, cap: Number(v('cap')) || 0, channel: v('channel') });
+      set('su:channel', v('channel')); set('su:opts', v('opts'));
+      $('f-title').value = ''; $('f-details').value = '';
+      toast('Posted to Discord'); load();
+    } catch (e) { if (e.status === 403) locked(e.message); else $('formerr').textContent = e.message; }
+    btn.disabled = false;
+  };
+  $('list').onclick = async e => {
+    const c = e.target.closest('[data-close]'), d = e.target.closest('[data-del]');
+    try {
+      if (c) { c.disabled = true; await call('su-close', { id: c.dataset.close }); toast('Sign-ups closed'); load(); }
+      if (d && confirm('Delete this sign-up and its Discord post? This cannot be undone.')) { d.disabled = true; await call('su-remove', { id: d.dataset.del }); toast('Deleted'); load(); }
+    } catch (x) { toast(x.message); load(); }
+  };
+  get('su:pass') ? open() : locked('');
+})();
+</script>
+</body>
+</html>
