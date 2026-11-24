@@ -214,16 +214,19 @@ function krWhen(frames, seen) {
   }
   return at;
 }
-async function krCards(frames, seen, want, file, job) {
+function krEarly(frames, job) {
+  return krCut(frames.map((b64, k) => ({ b64, t: frames.times ? frames.times[k] : k })), job)
+    .then(cards => cards && krLabel(cards, job));
+}
+async function krCards(frames, seen, want, file, job, early, show) {
   const best = new Map();
   const keep = cards => { for (const cd of cards || []) if (cd.rank > 0) { const was = best.get(cd.rank); if (!was || cd.mid < was.mid) best.set(cd.rank, cd); } };
-  let cards = await krCut(frames.map((b64, k) => ({ b64, t: frames.times ? frames.times[k] : k })), job);
-  if (!cards) return null;
-  const total0 = cards.length;
-  keep(await krLabel(cards, job));
-  if (job !== KR.job) return null;
+  const cards = await early;
+  if (!cards || job !== KR.job) return null;
+  let total = cards.length;
+  keep(cards);
   const when = krWhen(frames, seen), missing = [...want].filter(r => !best.has(r) && when.has(r));
-  let extra = 0;
+  show(best, total, missing.length && file && frames.times);
   if (missing.length && file && frames.times) {
     const times = new Set();
     for (const r of missing.slice(0, 20)) for (const d of [-.35, -.2, -.1, .1, .2, .35]) times.add(Math.max(0, +(when.get(r) + d).toFixed(3)));
@@ -232,10 +235,12 @@ async function krCards(frames, seen, want, file, job) {
     const more = await krCut(shots, job);
     if (!more) return null;
     more.forEach(cd => { cd.mid += .5; });
-    extra = more.length;
+    total += more.length;
     keep(await krLabel(more, job));
+    if (job !== KR.job) return null;
+    show(best, total, false);
   }
-  return { best, total: total0 + extra };
+  return best;
 }
 function krJump(rank) {
   const list = $('kzRecSc').querySelector('.cards'); if (!list) return;
@@ -247,25 +252,30 @@ function krJump(rank) {
   const sc = $('kzRecSc');
   sc.scrollTop = el.offsetTop - (sc.clientHeight - el.offsetHeight) / 2;
 }
-async function krStart(frames, seen, want, file) {
-  const job = ++KR.job; kzRecSel = null;
+async function krStart(frames, seen, want, file, job, early) {
+  kzRecSel = null;
+  if (job !== KR.job) return;
   const sc = $('kzRecSc');
   sc.innerHTML = '<p class="krwait">Preparing the cards…</p>';
   $('kzRec').classList.remove('hide', 'min'); $('kzRecHide').textContent = 'Hide';
   document.body.classList.add('hasrec');
   try {
-    const r = await krCards(frames, seen, want, file, job);
-    if (!r || job !== KR.job) return;
-    const list = document.createElement('div'); list.className = 'cards';
-    for (const rank of [...r.best.keys()].sort((a, b) => a - b)) {
-      const cd = r.best.get(rank), h = cd.bot - cd.top;
-      const c = Object.assign(document.createElement('canvas'), { width: cd.w, height: h });
-      c.getContext('2d').drawImage(cd.im, 0, cd.top, cd.w, h, 0, 0, cd.w, h);
-      c.dataset.r = rank;
-      list.appendChild(c);
-    }
-    sc.replaceChildren(list);
-    log(`recording cards — ${r.best.size} players from ${r.total} card pictures`);
+    const show = (best, total, more) => {
+      if (job !== KR.job) return;
+      const keepTop = sc.scrollTop;
+      const list = document.createElement('div'); list.className = 'cards';
+      for (const rank of [...best.keys()].sort((a, b) => a - b)) {
+        const cd = best.get(rank), h = cd.bot - cd.top;
+        const c = Object.assign(document.createElement('canvas'), { width: cd.w, height: h });
+        c.getContext('2d').drawImage(cd.im, 0, cd.top, cd.w, h, 0, 0, cd.w, h);
+        c.dataset.r = rank;
+        list.appendChild(c);
+      }
+      sc.replaceChildren(list);
+      if (kzRecSel) krJump(kzRecSel); else sc.scrollTop = keepTop;
+      if (!more) log(`recording cards — ${best.size} players from ${total} card pictures`);
+    };
+    await krCards(frames, seen, want, file, job, early, show);
   } catch (e) {
     if (job !== KR.job) return;
     console.log('[kartz] cards: ' + e.message);
@@ -284,14 +294,17 @@ $('tbl').addEventListener('click', e => {
 
 $('go').onclick = async () => {
   $('go').disabled = true; $('out').classList.add('hide');
-  KR.job++; $('kzRec').classList.add('hide'); document.body.classList.remove('hasrec');
+  const job = ++KR.job; $('kzRec').classList.add('hide'); document.body.classList.remove('hasrec');
+  let early = null;
   const usage = { requests: 0, prompt: 0, cached: 0, output: 0, total: 0 };
   try {
     startVideoUpload(videoFile);
     const t0 = Date.now();
     const sampled = kzSample(videoFile);
     log('reading the recording…'); setProg(0.1);
+    sampled.then(fr => { if (job === KR.job && !early) { early = krEarly(fr, job); early.catch(() => {}); } }).catch(() => {});
     const [roster, frames] = await Promise.all([freshRoster(), sampled]);
+    if (!early) { early = krEarly(frames, job); early.catch(() => {}); }
     const learned = store.get('aliases') || {};
     const images = await kzPack(frames);
     log(`${frames.length} frames → ${images.length} images — reading…`); setProg(0.4);
@@ -307,7 +320,7 @@ $('go').onclick = async () => {
     rows = matched.rows;
     (matched.notes || []).forEach(log);
     render(roster);
-    krStart(frames, seen, new Set(rows.map(r => r.seenRank > 0 ? r.seenRank : r.rank).filter(n => n > 0)), videoFile);
+    krStart(frames, seen, new Set(rows.map(r => r.seenRank > 0 ? r.seenRank : r.rank).filter(n => n > 0)), videoFile, job, early);
     log(`done in ${((Date.now() - t0) / 1000).toFixed(0)}s — ${sightings.length} readings → ${rows.length} players`
         + (fill.asked ? ` · gap fill found ${fill.found} of ${fill.asked}` : '')
         + ` · ${Math.round(usage.total / 1000)}k tokens`);
