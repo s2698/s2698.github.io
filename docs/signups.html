@@ -60,11 +60,32 @@ button:disabled{opacity:.55;cursor:default}
 .chips{display:flex;gap:6px;flex-wrap:wrap}
 .chip{text-transform:none;letter-spacing:0;border:1px solid var(--line);background:var(--head);color:var(--ink);border-radius:999px;padding:4px 11px;font-size:13px;font-weight:600;cursor:pointer;user-select:none}
 .chip.on{background:color-mix(in srgb,var(--acc) 20%,transparent);border-color:var(--acc)}
-.optrow{display:grid;grid-template-columns:58px minmax(0,1fr) 84px 112px 28px;gap:6px;align-items:center;margin-bottom:6px}
+.optrow{display:grid;grid-template-columns:56px minmax(0,1fr) 66px 136px 90px 28px;gap:6px;align-items:center;margin-bottom:6px}
 .optrow input,.optrow select{padding:6px 8px}
 .optrow .x{border:0;background:none;color:var(--dim);font-size:18px;padding:0}
 .ohead{font-size:11px;text-transform:uppercase;color:var(--dim);font-weight:700;margin-bottom:4px}
-@media (max-width:640px){.optrow{grid-template-columns:48px minmax(0,1fr) 64px 28px}.optrow .cnt{grid-column:2/4}.ohead span:nth-child(4){display:none}}
+@media (max-width:640px){.optrow{grid-template-columns:48px minmax(0,1fr) 64px 28px;margin-bottom:12px}.optrow .cnt{grid-column:2/3}.optrow .sty{grid-column:3/5}.ohead span:nth-child(n+4){display:none}}
+.wlh{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);font-weight:700;margin:8px 0 2px}
+.names li.wl span{color:var(--dim);font-style:italic}
+.qbox{border-left:3px solid var(--acc);margin:0 0 10px 56px;padding:6px 0 2px 12px}
+.qrow{display:grid;grid-template-columns:minmax(0,1fr) 150px 28px;gap:6px;margin-bottom:6px}
+.qrow2{display:grid;grid-template-columns:minmax(0,1fr) 70px auto;gap:6px;align-items:center;margin-bottom:8px}
+.qbox input,.qbox select{padding:6px 8px}
+.qbox .x{border:0;background:none;color:var(--dim);font-size:18px;padding:0}
+.qbox .qn{font-size:11px;font-weight:800;color:var(--acc);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px}
+.ck{display:inline-flex;gap:6px;align-items:center;font-size:13px;white-space:nowrap;text-transform:none;letter-spacing:0;font-weight:400;color:var(--ink)}
+.ck input{width:auto}
+.form label.ck{flex-direction:row;align-items:center;text-transform:none;letter-spacing:0;font-weight:400;font-size:13px;color:var(--ink)}
+.addq{margin:0 0 10px 56px}
+@media (max-width:640px){.qbox,.addq{margin-left:12px}.qrow{grid-template-columns:minmax(0,1fr) 28px}.qrow select{grid-column:1/2}.qrow2{grid-template-columns:1fr 70px}.qrow2 .ck{grid-column:1/-1}}
+.atag{background:var(--head);color:var(--ink);box-shadow:inset 0 0 0 1px var(--line);max-width:40%;overflow:hidden;text-overflow:ellipsis}
+.names .ed{display:none;border:0;background:none;color:var(--acc);padding:0 2px;font-size:14px}
+.editing .names .ed{display:inline-block}
+.ansed{padding:12px 16px;background:var(--head);border-top:1px solid var(--line)}
+.ansed h5{margin:0 0 8px;font-size:13px}
+.ansed .grp{margin-bottom:8px}.ansed .grp b{display:block;font-size:12px;color:var(--dim);margin-bottom:4px}
+.ansed .ck{margin:0 12px 4px 0}
+.pill.rep{background:color-mix(in srgb,var(--acc) 16%,transparent);color:var(--acc)}
 .tpls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 .tpl{border:1px solid var(--line);background:var(--head);border-radius:10px;padding:8px 12px;cursor:pointer;text-align:left;font-weight:400}
 .tpl b{display:block}.tpl small{color:var(--dim)}
@@ -155,15 +176,17 @@ button:disabled{opacity:.55;cursor:default}
             <label class="full">Details<textarea id="f-details" maxlength="1500" placeholder="What to bring, when to be online…"></textarea></label>
             <div class="sec">Options <small style="font-weight:400;text-transform:none;letter-spacing:0">· up to 5 · emoji are optional, e.g. ⚔️</small></div>
             <div class="full">
-              <div class="optrow ohead"><span>Emoji</span><span>Option</span><span>Max</span><span>Counts?</span><span></span></div>
+              <div class="optrow ohead"><span>Emoji</span><span>Option</span><span>Max</span><span>Counts?</span><span>Button</span><span></span></div>
               <div id="optrows"></div>
               <button type="button" class="sm" id="addopt">+ Add option</button>
             </div>
             <label>Max per alliance<input type="number" id="f-cap" min="0" max="500" placeholder="No limit"></label>
-            <div></div>
+            <label>When an option or alliance is full<select id="f-full"><option value="wl">Waitlist (moves up automatically)</option><option value="stop">Stop sign-ups</option></select></label>
             <div class="sec">When</div>
             <label>Event starts <small>optional</small><input type="datetime-local" id="f-start"></label>
-            <label>Sign-ups close <small>optional</small><input type="datetime-local" id="f-close"></label>
+            <label>Sign-ups close <small>optional · the buttons grey out then</small><input type="datetime-local" id="f-close"></label>
+            <label>Reminder <small>needs a start time</small><select id="f-rem"><option value="0">No reminder</option><option value="15">15 min before the start</option><option value="30">30 min before the start</option><option value="60">1 hour before the start</option><option value="120">2 hours before the start</option><option value="180">3 hours before the start</option></select></label>
+            <label>Repeat <small>the next one is posted when this one starts</small><select id="f-rep"><option value="">Once</option><option value="w">Every week</option><option value="2w">Every 2 weeks</option></select></label>
             <div class="sec">Where</div>
             <div class="fl full">Channels <small>one or more</small><div class="chips" id="chans"></div></div>
             <div class="fl full">Ping when posted <small>optional</small><div class="chips" id="roles"></div></div>
@@ -231,7 +254,7 @@ button:disabled{opacity:.55;cursor:default}
     if (!r.ok) { const e = Object.assign(new Error(j.error || 'The Worker answered ' + r.status), { status: r.status }); if (r.status === 403) locked(e.message); throw e; }
     return j;
   }
-  let EV = [], TPL = [], CFG = null, ROSTER = null, cur = null, editing = null, edits = new Set();
+  let EV = [], TPL = [], CFG = null, ROSTER = null, cur = null, editing = null, edits = new Set(), ansEd = null;
 
   function locked(msg) { set('su:pass', ''); $('main').hidden = true; $('tabs').hidden = true; $('lock').hidden = false; $('lockerr').textContent = msg || ''; $('pass').focus(); }
   function show(t) {
@@ -244,19 +267,40 @@ button:disabled{opacity:.55;cursor:default}
   const chName = id => { const c = CFG && CFG.channels.find(x => x.id === id); return c ? '#' + c.name : '#' + id; };
   const roleName = id => { const r = CFG && CFG.roles.find(x => x.id === id); return r ? '@' + r.name : '@role'; };
 
+  const ansText = (o, ans, skip) => ((o && o.qs) || []).map((q, j) => j === skip ? '' : ((ans || [])[j] || []).map(k => q.choices[k]).filter(Boolean).join(', ')).filter(Boolean).join(' · ');
+  function colsOf(e) {
+    const out = [];
+    e.opts.forEach((o, i) => {
+      const act = sortP(e.list.filter(p => p.o === i && !p.w)), wl = e.list.filter(p => p.o === i && p.w).sort((x, y) => x.at - y.at);
+      const ci = (o.qs || []).findIndex(q => q.cols), emo = o.emoji ? o.emoji + ' ' : '';
+      if (ci < 0) return out.push({ i, name: emo + o.label, max: o.max, ps: act, wl, skip: -1, quiet: !o.counts });
+      o.qs[ci].choices.forEach((c, k) => { const has = p => ((p.ans || [])[ci] || []).includes(k); out.push({ i, name: c, max: o.qs[ci].max, ps: act.filter(has), wl: wl.filter(has), skip: ci }); });
+      const none = p => !((p.ans || [])[ci] || []).length;
+      if (act.some(none) || wl.some(none)) out.push({ i, name: emo + o.label + ' · no answer yet', ps: act.filter(none), wl: wl.filter(none), skip: ci, quiet: true });
+    });
+    return out;
+  }
+  function ansEditor(e) {
+    const p = e.list.find(x => x.s === ansEd.s), o = e.opts[p ? p.o : 0];
+    if (!p || !o || !o.qs) return '';
+    return `<div class="ansed"><h5>Answers for ${esc(p.n)}</h5>${o.qs.map((q, j) => `<div class="grp"><b>${esc(q.q)}</b>${q.choices.map((c, k) => `<label class="ck"><input type="${q.multi ? 'checkbox' : 'radio'}" name="ae${j}" value="${k}" data-aj="${j}"${((p.ans || [])[j] || []).includes(k) ? ' checked' : ''}> ${esc(c)}</label>`).join('')}</div>`).join('')}
+      <div class="row"><button type="button" class="sm pri" data-asave="${esc(e.id)}">Save answers</button><button type="button" class="sm" data-acancel="${esc(e.id)}">Cancel</button></div></div>`;
+  }
   function eventCard(e, hist, q) {
-    const cols = e.opts.map((o, i) => {
-      const ps = sortP(e.list.filter(p => p.o === i));
-      const sel = p => `<select data-mv="${esc(e.id)}" data-s="${esc(p.s)}">${e.opts.map((x, k) => `<option value="${k}"${k === i ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select><button type="button" class="rm" title="Remove" data-rm="${esc(e.id)}" data-s="${esc(p.s)}">✕</button>`;
-      return `<div class="opt${o.counts ? '' : ' q'}"><h4><span>${o.emoji ? esc(o.emoji) + ' ' : ''}${esc(o.label)}</span><b>${ps.length}${o.max ? ' / ' + o.max : ''}</b></h4>${ps.length ? `<ul class="names">${ps.map(p =>
-        `<li><span title="${esc(p.n)}"${q && p.n.toLowerCase().includes(q) ? ' class="hl"' : ''}>${esc(p.n)}</span><i class="tag t${esc(p.a)}">${esc(p.a)}</i>${hist ? '' : sel(p)}</li>`).join('')}</ul>` : '<p class="none">Nobody yet</p>'}</div>`;
+    const cols = colsOf(e).map(c => {
+      const o = e.opts[c.i];
+      const sel = p => `<select data-mv="${esc(e.id)}" data-s="${esc(p.s)}">${e.opts.map((x, k) => `<option value="${k}"${k === p.o ? ' selected' : ''}>${esc(x.label)}</option>`).join('')}</select>${o.qs ? `<button type="button" class="ed" title="Edit answers" data-aed="${esc(e.id)}" data-s="${esc(p.s)}">✎</button>` : ''}<button type="button" class="rm" title="Remove" data-rm="${esc(e.id)}" data-s="${esc(p.s)}">✕</button>`;
+      const tag = p => { const t = ansText(o, p.ans, c.skip); return t ? `<i class="tag atag" title="${esc(t)}">${esc(t)}</i>` : ''; };
+      return `<div class="opt${c.quiet ? ' q' : ''}"><h4><span>${esc(c.name)}</span><b>${c.ps.length}${c.max ? ' / ' + c.max : ''}${c.wl.length ? ` · ${c.wl.length} waiting` : ''}</b></h4>${c.ps.length ? `<ul class="names">${c.ps.map(p =>
+        `<li><span title="${esc(p.n)}"${q && p.n.toLowerCase().includes(q) ? ' class="hl"' : ''}>${esc(p.n)}</span>${tag(p)}<i class="tag t${esc(p.a)}">${esc(p.a)}</i>${hist ? '' : sel(p)}</li>`).join('')}</ul>` : '<p class="none">Nobody yet</p>'}${c.wl.length && !hist ? `<div class="wlh">Waitlist</div><ul class="names">${c.wl.map((p, k) =>
+        `<li class="wl"><span title="${esc(p.n)}">${k + 1}. ${esc(p.n)}</span>${tag(p)}<i class="tag t${esc(p.a)}">${esc(p.a)}</i>${sel(p)}</li>`).join('')}</ul>` : ''}</div>`;
     }).join('');
     const tally = ALLY.map(a => `<span class="t${a}">${a} ${e.counts[a] || 0}${e.cap ? ' / ' + e.cap : ''}</span>`).join('');
-    const meta = [e.start ? 'Starts ' + when(e.start) : '', e.closes ? (e.shut && !e.closed ? 'Closed ' : 'Closes ') + when(e.closes) : '', e.chans.map(chName).join(', '), e.total + ' replied'].filter(Boolean).join(' · ');
+    const meta = [e.start ? 'Starts ' + when(e.start) : '', e.closes ? (e.shut && !e.closed ? 'Closed ' : 'Closes ') + when(e.closes) : '', e.chans.map(chName).join(', '), e.list.filter(p => !p.w).length + ' replied'].filter(Boolean).join(' · ');
     const btn = (k, label, cls = '') => `<button type="button" class="sm ${cls}" data-${k}="${esc(e.id)}">${label}</button>`;
     return `<div class="card ev${edits.has(e.id) && !hist ? ' editing' : ''}" style="border-top:4px solid ${hex(e.color)}"><div class="evh"><div class="t"><h3>${esc(e.title)}</h3><div class="m">${esc(meta)}</div></div>
-      <span class="pill${e.shut ? ' off' : ''}">${hist ? 'Done' : e.shut ? 'Closed' : 'Open'}</span></div>
-      <div class="tally">${tally}</div><div class="opts">${cols}</div>
+      ${e.repeat && !hist ? `<span class="pill rep">↻ ${e.repeat === '2w' ? 'Every 2 weeks' : 'Every week'}</span>` : ''}${e.remind && e.start && !hist ? `<span class="pill rep">🔔 ${e.remind >= 60 ? e.remind / 60 + ' h' : e.remind + ' min'} before</span>` : ''}<span class="pill${e.shut ? ' off' : ''}">${hist ? 'Done' : e.shut ? 'Closed' : 'Open'}</span></div>
+      <div class="tally">${tally}</div><div class="opts">${cols}</div>${!hist && ansEd && ansEd.id === e.id ? ansEditor(e) : ''}
       ${hist ? '' : `<div class="addp"><input type="text" list="rosterlist" placeholder="Add a player by name…" data-addname="${esc(e.id)}"><select data-addopt="${esc(e.id)}">${e.opts.map((o, k) => `<option value="${k}">${esc(o.label)}</option>`).join('')}</select>${btn('add', 'Add', 'pri')}<span class="m">Changes update the Discord post.</span></div>`}
       <div class="evf">${hist ? btn('again', 'Post again') + btn('csv', 'Download CSV') + btn('copy', 'Copy as text') + btn('del', 'Delete', 'danger')
         : btn('edit', 'Edit post') + btn('people', edits.has(e.id) ? 'Done' : 'Edit players') + btn('csv', 'Download CSV') + btn('copy', 'Copy as text') + (e.shut ? '' : btn('close', 'Close now')) + btn('del', 'Delete', 'danger')}</div></div>`;
@@ -277,14 +321,16 @@ button:disabled{opacity:.55;cursor:default}
   const byId = id => EV.find(e => e.id === id);
   function csv(e) {
     const q = v => /[",\n]/.test(v) ? '"' + String(v).replace(/"/g, '""') + '"' : v;
-    const rows = [['Name', 'Alliance', 'Option', 'Signed up at'], ...sortP(e.list).sort((x, y) => x.o - y.o).map(p => [p.n, p.a, e.opts[p.o] ? e.opts[p.o].label : '', p.at ? new Date(p.at).toLocaleString('en-GB') : ''])];
+    const qs = [...new Set(e.opts.flatMap(o => (o.qs || []).map(x => x.q)))];
+    const rows = [['Name', 'Alliance', 'Option', ...qs, 'Signed up at'], ...sortP(e.list).sort((x, y) => x.o - y.o || x.w - y.w).map(p => { const o = e.opts[p.o] || {};
+      return [p.n, p.a, (o.label || '') + (p.w ? ' (waitlist)' : ''), ...qs.map(t => { const j = (o.qs || []).findIndex(x => x.q === t); return j < 0 ? '' : ((p.ans || [])[j] || []).map(k => o.qs[j].choices[k]).join(', '); }), p.at ? new Date(p.at).toLocaleString('en-GB') : '']; })];
     const a = document.createElement('a');
     a.href = URL.createObjectURL(new Blob(['﻿' + rows.map(r => r.map(q).join(',')).join('\n')], { type: 'text/csv' }));
     a.download = e.title.replace(/[^\w\- ]+/g, '').trim().replace(/\s+/g, '-') + '.csv';
     a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   }
   function text(e) {
-    return [e.title + (e.start ? ' · ' + when(e.start) : ''), ...e.opts.map((o, i) => `${o.label} (${e.list.filter(p => p.o === i).length}): ${sortP(e.list.filter(p => p.o === i)).map(p => p.n).join(', ') || '-'}`)].join('\n');
+    return [e.title + (e.start ? ' · ' + when(e.start) : ''), ...colsOf(e).map(c => { const o = e.opts[c.i], t = p => { const a = ansText(o, p.ans, c.skip); return a ? ` (${a})` : ''; }; return `${c.name.replace(/^\S+\s(?=\S)/u, m => /\p{Extended_Pictographic}/u.test(m) ? '' : m)} (${c.ps.length}): ${c.ps.map(p => p.n + t(p)).join(', ') || '-'}${c.wl.length ? ` · waitlist: ${c.wl.map(p => p.n).join(', ')}` : ''}`; })].join('\n');
   }
   async function roster() {
     if (ROSTER) return;
@@ -296,7 +342,7 @@ button:disabled{opacity:.55;cursor:default}
   }
   async function listClick(e) {
     const b = e.target.closest('button'); if (!b) return;
-    const d = b.dataset, id = d.edit || d.people || d.csv || d.copy || d.close || d.del || d.again || d.add || d.rm, ev = byId(id);
+    const d = b.dataset, id = d.edit || d.people || d.csv || d.copy || d.close || d.del || d.again || d.add || d.rm || d.aed || d.asave || d.acancel, ev = byId(id);
     if (!ev) return;
     if (d.people) { edits.has(id) ? edits.delete(id) : edits.add(id); drawEvents(); roster(); }
     if (d.csv) csv(ev);
@@ -304,11 +350,19 @@ button:disabled{opacity:.55;cursor:default}
     if (d.edit) { fill(ev, true); show('new'); scrollTo(0, 0); }
     if (d.again) { fill({ ...ev, start: 0, closes: 0 }, false); show('new'); scrollTo(0, 0); }
     if (d.rm) player(id, { act: 'remove', search: d.s }, 'Removed');
+    if (d.aed) { ansEd = { id, s: d.s }; drawEvents(); }
+    if (d.acancel) { ansEd = null; drawEvents(); }
+    if (d.asave) {
+      const p = ev.list.find(x => x.s === ansEd.s), o = ev.opts[p.o], box = b.closest('.ansed');
+      const ans = o.qs.map((q, j) => [...box.querySelectorAll(`[data-aj="${j}"]:checked`)].map(x => Number(x.value)));
+      b.disabled = true; ansEd = null; await player(id, { act: 'move', search: p.s, opt: p.o, ans }, 'Answers saved');
+    }
     if (d.add) {
       const box = document.querySelector(`[data-addname="${CSS.escape(id)}"]`), v = box.value.trim(), opt = Number(document.querySelector(`[data-addopt="${CSS.escape(id)}"]`).value);
       const hit = ROSTER && (ROSTER.find(([n, a]) => `${n} · ${a}` === v) || ROSTER.filter(([n]) => n.toLowerCase() === v.toLowerCase()).at(0));
       if (!hit) return toast('Pick a name from the list');
       b.disabled = true; await player(id, { act: 'add', search: hit[2], opt }, `Added ${hit[0]}`); b.disabled = false;
+      const ne = byId(id); if (ne && ne.opts[opt] && ne.opts[opt].qs && ne.list.some(x => x.s === hit[2])) { ansEd = { id, s: hit[2] }; drawEvents(); }
     }
     if (d.close) { b.disabled = true; try { await call('su-close', { id }); toast('Sign-ups closed'); load(); } catch (x) { toast(x.message); b.disabled = false; } }
     if (d.del && confirm(`Delete “${ev.title}” and its Discord post${ev.posts.length > 1 ? 's' : ''}? This cannot be undone.`)) {
@@ -319,12 +373,13 @@ button:disabled{opacity:.55;cursor:default}
   $('evlist').onchange = e => { const s = e.target.closest('[data-mv]'); if (s) player(s.dataset.mv, { act: 'move', search: s.dataset.s, opt: Number(s.value) }, 'Moved'); };
   $('hq').oninput = drawHist;
 
-  function blank() { return { title: '', details: '', opts: [{ emoji: '', label: 'Sign up', max: 0, counts: true }], cap: 0, start: 0, closes: 0, chans: [], roles: [], color: 0xe0457b, image: '' }; }
+  function blank() { return { title: '', details: '', opts: [{ emoji: '', label: 'Sign up', max: 0, counts: true, style: '' }], cap: 0, start: 0, closes: 0, chans: [], roles: [], color: 0xe0457b, image: '', remind: 0, repeat: '', full: 'wl' }; }
   function fill(src, edit) {
     editing = edit ? src.id : null;
-    cur = { opts: src.opts.map(o => ({ ...o })), chans: src.chans.slice(), roles: (src.roles || []).slice(), color: hex(src.color), tpl: src.name ? src.id : null };
+    cur = { opts: src.opts.map(o => ({ ...o, qs: (o.qs || []).map(q => ({ ...q, choices: Array.isArray(q.choices) ? q.choices.join(', ') : q.choices || '' })) })), chans: src.chans.slice(), roles: (src.roles || []).slice(), color: hex(src.color), tpl: src.name ? src.id : null };
     $('f-title').value = src.title || ''; $('f-details').value = src.details || ''; $('f-cap').value = src.cap || '';
     $('f-start').value = local(src.start); $('f-close').value = local(src.closes); $('f-img').value = src.image || '';
+    $('f-rem').value = String(src.remind || 0); $('f-rep').value = src.repeat || ''; $('f-full').value = src.full || 'wl';
     $('formTitle').textContent = edit ? 'Edit post' : 'New event';
     $('formHint').textContent = edit ? 'Changes update the post in Discord. Adding a channel posts it there too; removing one deletes that post.' : 'Start from a template or from scratch. The preview shows how the post will look in Discord.';
     $('post').textContent = edit ? 'Update post' : 'Post to Discord';
@@ -334,7 +389,9 @@ button:disabled{opacity:.55;cursor:default}
   $('cancelEdit').onclick = () => { fill(blank(), false); show('events'); };
   function drawForm() {
     $('tplpick').innerHTML = TPL.map(t => `<button type="button" class="tpl${cur.tpl === t.id ? ' on' : ''}" data-tpl="${esc(t.id)}"><b>${esc(t.name)}</b><small>${t.opts.map(o => esc((o.emoji ? o.emoji + ' ' : '') + o.label)).join(' · ')}</small></button>`).join('') + `<button type="button" class="tpl${cur.tpl ? '' : ' on'}" data-tpl=""><b>Blank</b><small>Start from scratch</small></button>`;
-    $('optrows').innerHTML = cur.opts.map((o, i) => `<div class="optrow"><input value="${esc(o.emoji)}" data-o="${i}" data-k="emoji" placeholder="—" maxlength="60"><input value="${esc(o.label)}" data-o="${i}" data-k="label" maxlength="40" placeholder="Option name"><input type="number" min="0" max="500" value="${o.max || ''}" data-o="${i}" data-k="max" placeholder="Any"><select class="cnt" data-o="${i}" data-k="counts"><option value="1"${o.counts ? ' selected' : ''}>Counts</option><option value="0"${o.counts ? '' : ' selected'}>Doesn't count</option></select><button type="button" class="x" data-del="${i}" title="Remove option">×</button></div>`).join('');
+    $('optrows').innerHTML = cur.opts.map((o, i) => `<div class="optrow"><input value="${esc(o.emoji)}" data-o="${i}" data-k="emoji" placeholder="—" maxlength="60"><input value="${esc(o.label)}" data-o="${i}" data-k="label" maxlength="40" placeholder="Option name"><input type="number" min="0" max="500" value="${o.max || ''}" data-o="${i}" data-k="max" placeholder="Any"><select class="cnt" data-o="${i}" data-k="counts"><option value="1"${o.counts ? ' selected' : ''}>Counts</option><option value="0"${o.counts ? '' : ' selected'}>Doesn't count</option></select><select class="sty" data-o="${i}" data-k="style">${[['', 'Auto'], ['green', 'Green'], ['blue', 'Blue'], ['grey', 'Grey'], ['red', 'Red']].map(([v, l]) => `<option value="${v}"${(o.style || '') === v ? ' selected' : ''}>${l}</option>`).join('')}</select><button type="button" class="x" data-del="${i}" title="Remove option">×</button></div>${(o.qs || []).map((q, j) => `<div class="qbox"><div class="qn">Follow-up ${j + 1}</div>
+      <div class="qrow"><input value="${esc(q.q)}" data-q="${i}|${j}" data-qk="q" maxlength="80" placeholder="Question, e.g. Which slots?"><select data-q="${i}|${j}" data-qk="multi"><option value="1"${q.multi ? ' selected' : ''}>Pick one or more</option><option value="0"${q.multi ? '' : ' selected'}>Pick one</option></select><button type="button" class="x" data-qdel="${i}|${j}" title="Remove question">×</button></div>
+      <div class="qrow2"><input value="${esc(q.choices)}" data-q="${i}|${j}" data-qk="choices" placeholder="Choices, separated by commas"><input type="number" min="0" max="500" value="${q.max || ''}" data-q="${i}|${j}" data-qk="max" placeholder="Max" title="Max per choice"><label class="ck"><input type="checkbox" data-q="${i}|${j}" data-qk="cols"${q.cols ? ' checked' : ''}> Show as columns</label></div></div>`).join('')}${(o.qs || []).length < 2 ? `<button type="button" class="sm addq" data-qadd="${i}">+ Follow-up question</button>` : ''}`).join('');
     $('addopt').hidden = cur.opts.length >= 5;
     const chans = CFG ? CFG.channels.filter(c => c.on || cur.chans.includes(c.id)) : [];
     $('chans').innerHTML = chans.length ? chans.map(c => `<span class="chip${cur.chans.includes(c.id) ? ' on' : ''}" data-ch="${c.id}">#${esc(c.name)}</span>`).join('') : '<span class="m">No channels yet. Go to Settings, load the server from Discord and tick the sign-up channels.</span>';
@@ -344,7 +401,16 @@ button:disabled{opacity:.55;cursor:default}
     preview();
   }
   $('tplpick').onclick = e => { const b = e.target.closest('[data-tpl]'); if (!b) return; const t = TPL.find(x => x.id === b.dataset.tpl); fill(t || blank(), false); if (t) cur.tpl = t.id; drawForm(); };
-  $('optrows').oninput = $('optrows').onchange = e => { const el = e.target, i = el.dataset.o; if (i == null) return; const k = el.dataset.k; cur.opts[i][k] = k === 'counts' ? el.value === '1' : k === 'max' ? Number(el.value) || 0 : el.value; if (k === 'label' && e.type === 'change' && !cur.opts[i].touched) { cur.opts[i].counts = !quiet(el.value); drawForm(); return; } if (k === 'counts') cur.opts[i].touched = true; preview(); };
+  $('optrows').oninput = $('optrows').onchange = e => { const el = e.target, i = el.dataset.o; if (i == null || el.dataset.q) return; const k = el.dataset.k; cur.opts[i][k] = k === 'counts' ? el.value === '1' : k === 'max' ? Number(el.value) || 0 : el.value; if (k === 'label' && e.type === 'change' && !cur.opts[i].touched) { cur.opts[i].counts = !quiet(el.value); drawForm(); return; } if (k === 'counts') cur.opts[i].touched = true; preview(); };
+  $('optrows').addEventListener('input', e => { const k = e.target.dataset.q; if (!k) return; const [i, j] = k.split('|').map(Number), f = e.target.dataset.qk, q = cur.opts[i].qs[j];
+    q[f] = f === 'cols' ? e.target.checked : f === 'multi' ? e.target.value === '1' : f === 'max' ? Number(e.target.value) || 0 : e.target.value;
+    if (f === 'cols' && q.cols) { cur.opts[i].qs.forEach(x => { if (x !== q) x.cols = false; }); drawForm(); return; } preview(); });
+  $('optrows').addEventListener('change', e => { if (e.target.dataset.qk === 'multi' || e.target.dataset.qk === 'cols') { const [i, j] = e.target.dataset.q.split('|').map(Number), q = cur.opts[i].qs[j]; if (e.target.dataset.qk === 'multi') q.multi = e.target.value === '1'; else { q.cols = e.target.checked; if (q.cols) cur.opts[i].qs.forEach(x => { if (x !== q) x.cols = false; }); } drawForm(); } });
+  $('optrows').addEventListener('click', e => {
+    const a = e.target.dataset.qadd, d = e.target.dataset.qdel;
+    if (a != null) { const o = cur.opts[Number(a)]; o.qs = o.qs || []; o.qs.push({ q: '', choices: '', multi: !o.qs.length, max: 0, cols: !o.qs.some(x => x.cols) && !o.qs.length }); drawForm(); }
+    if (d) { const [i, j] = d.split('|').map(Number); cur.opts[i].qs.splice(j, 1); drawForm(); }
+  });
   $('optrows').onclick = e => { const d = e.target.dataset.del; if (d != null && cur.opts.length > 1) { cur.opts.splice(Number(d), 1); drawForm(); } };
   $('addopt').onclick = () => { cur.opts.push({ emoji: '', label: '', max: 0, counts: true }); drawForm(); $('optrows').querySelector(`[data-o="${cur.opts.length - 1}"][data-k="label"]`).focus(); };
   document.querySelector('[data-p="new"]').addEventListener('click', e => {
@@ -354,26 +420,30 @@ button:disabled{opacity:.55;cursor:default}
     if (r) { cur.roles = tog(cur.roles, r); drawForm(); }
     if (k) { cur.color = k; drawForm(); }
   });
-  ['f-title', 'f-details', 'f-cap', 'f-start', 'f-close', 'f-img'].forEach(id => $(id).addEventListener('input', preview));
+  ['f-title', 'f-details', 'f-cap', 'f-start', 'f-close', 'f-img', 'f-rem', 'f-rep', 'f-full'].forEach(id => { $(id).addEventListener('input', preview); $(id).addEventListener('change', preview); });
   function form() {
     const ms = v => v ? new Date(v).getTime() : 0;
-    return { title: $('f-title').value.trim(), details: $('f-details').value.trim(), opts: cur.opts.map(({ emoji, label, max, counts }) => ({ emoji: emoji.trim(), label: label.trim(), max, counts })).filter(o => o.label),
-      cap: Number($('f-cap').value) || 0, start: ms($('f-start').value), closes: ms($('f-close').value), chans: cur.chans, roles: cur.roles, color: cur.color, image: $('f-img').value.trim() };
+    return { title: $('f-title').value.trim(), details: $('f-details').value.trim(), opts: cur.opts.map(({ emoji, label, max, counts, style, qs }) => ({ emoji: (emoji || '').trim(), label: label.trim(), max, counts, style: style || '',
+        qs: (qs || []).map(q => ({ q: (q.q || '').trim(), choices: String(q.choices || '').split(',').map(c => c.trim()).filter(Boolean), multi: !!q.multi, max: q.max || 0, cols: !!q.cols })).filter(q => q.choices.length) })).filter(o => o.label),
+      cap: Number($('f-cap').value) || 0, start: ms($('f-start').value), closes: ms($('f-close').value), chans: cur.chans, roles: cur.roles, color: cur.color, image: $('f-img').value.trim(),
+      remind: Number($('f-rem').value) || 0, repeat: $('f-rep').value, full: $('f-full').value };
   }
   function preview() {
     const f = form(), opts = f.opts.length ? f.opts : [{ label: 'Sign up', emoji: '', counts: true }];
     const ev = editing && byId(editing);
-    const n = i => ev ? ev.list.filter(p => p.o === i).length : 0;
-    const info = [f.start ? `🕑 <b>Starts</b> ${esc(long(f.start))} <span style="color:#949ba4">(shown in each player's time zone)</span>` : '', f.closes ? `🔒 Sign-ups close ${esc(long(f.closes))}` : '', f.cap ? `👥 Max ${f.cap} per alliance` : ''].filter(Boolean);
+    const n = i => ev ? ev.list.filter(p => p.o === i && !p.w).length : 0;
+    const info = [f.start ? `🕑 <b>Starts</b> ${esc(long(f.start))} <span style="color:#949ba4">(shown in each player's time zone)</span>` : '', f.closes ? `🔒 Sign-ups close ${esc(long(f.closes))}` : '', f.cap ? `👥 Max ${f.cap} per alliance` : '',
+      f.remind && f.start ? `🔔 Reminder ${f.remind >= 60 ? f.remind / 60 + ' h' : f.remind + ' min'} before the start` : '', f.repeat ? `↻ Repeats every ${f.repeat === '2w' ? '2 weeks' : 'week'}` : '',
+      f.full === 'wl' && (f.cap || f.opts.some(o => o.max)) ? '⏳ When full, you go on a waitlist' : ''].filter(Boolean);
     $('preview').innerHTML = `<div class="top"># ${esc(f.chans.length ? chName(f.chans[0]).slice(1) : 'pick-a-channel')}${f.chans.length > 1 ? ` · and ${f.chans.length - 1} more` : ''}</div>
       <div class="msg"><div class="av">2698</div><div style="min-width:0;flex:1"><div class="who">2698 Bot<span class="bt">BOT</span></div>
       ${f.roles.length && !editing ? `<div>${f.roles.map(r => `<span class="ping">${esc(roleName(r))}</span>`).join(' ')}</div>` : ''}
       <div class="emb" style="border-left-color:${esc(cur.color)}"><h3>${esc(f.title || 'Event title')}</h3>
       ${f.details ? `<p>${esc(f.details)}</p>` : ''}${info.length ? `<p>${info.join('<br>')}</p>` : ''}
-      <div class="ef">${opts.map((o, i) => `<div><b>${esc((o.emoji ? o.emoji + ' ' : '') + o.label)} · ${n(i)}${o.max ? '/' + o.max : ''}</b>${ev ? (sortP(ev.list.filter(p => p.o === i)).map(p => esc(p.n)).join('<br>') || '—') : '—'}</div>`).join('')}</div>
+      <div class="ef">${colsOf({ opts, list: ev ? ev.list : [] }).map(c => `<div><b>${esc(c.name)} · ${c.ps.length}${c.max ? '/' + c.max : ''}</b>${c.ps.map(p => { const t = ansText(opts[c.i], p.ans, c.skip); return esc(p.n + (t ? ' · ' + t : '')); }).join('<br>') || '—'}</div>`).join('')}</div>
       ${/^https:\/\//i.test(f.image) ? `<img src="${esc(f.image)}" alt="" onerror="this.remove()">` : ''}
       <div class="efoot">Signed up: ${ALLY.map(a => `${a} ${ev ? ev.counts[a] || 0 : 0}${f.cap ? '/' + f.cap : ''}`).join(' · ')}</div></div>
-      <div class="dbtns">${opts.map((o, i) => `<span class="${!o.counts ? 'gr' : i === 0 ? 'g' : 'b'}">${esc((o.emoji ? o.emoji + ' ' : '') + o.label)}</span>`).join('')}</div>
+      <div class="dbtns">${opts.map((o, i) => `<span class="${{ green: 'g', blue: 'b', grey: 'gr', red: 'r' }[o.style] || (!o.counts ? 'gr' : i === 0 ? 'g' : 'b')}">${esc((o.emoji ? o.emoji + ' ' : '') + o.label)}</span>`).join('')}</div>
       <div class="dbtns"><span class="r">Cancel sign-up</span></div></div></div>`;
   }
   $('post').onclick = async () => {
