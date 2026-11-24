@@ -65,10 +65,13 @@ button:disabled{opacity:.55;cursor:default}
 .opt.q h4{color:var(--dim)}
 .al{margin:0 0 8px}
 .al:last-child{margin:0}
-.tag{display:inline-block;font-size:11.5px;font-weight:700;border-radius:6px;padding:1px 7px;margin-bottom:3px}
+.tag{display:inline-block;font-style:normal;font-size:11.5px;font-weight:700;border-radius:6px;padding:1px 7px;margin-bottom:3px}
 .t698S{background:var(--sB);color:var(--sF)}.t698N{background:var(--nB);color:var(--nF)}.t698W{background:var(--wB);color:var(--wF)}.t698C{background:var(--cB);color:var(--cF)}
-.al ul{list-style:none;margin:0;padding:0;columns:2;column-gap:12px;font-size:13.5px}
-.al li{break-inside:avoid;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.names{list-style:none;margin:0;padding:0;font-size:13.5px}
+.names li{display:flex;align-items:center;gap:8px;padding:3px 0;border-top:1px solid var(--line)}
+.names li:first-child{border-top:0}
+.names li span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.names .tag{margin:0;flex:none}
 .none{color:var(--dim);font-size:13px}
 .evf{display:flex;gap:8px;justify-content:flex-end;padding:10px 16px;background:var(--head)}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:999px;font-weight:600;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none}
@@ -135,9 +138,9 @@ button:disabled{opacity:.55;cursor:default}
       const shut = e.closed || (e.closes && Date.now() > e.closes);
       const people = e.people || (e.byOpt || []).map(([o]) => [o, []]);
       const opts = people.map(([o, ps]) => {
-        const groups = ALLY.map(a => [a, ps.filter(p => p[1] === a).map(p => p[0]).sort((x, y) => x.localeCompare(y))]).filter(g => g[1].length);
-        return `<div class="opt${quiet(o) ? ' q' : ''}"><h4>${esc(o)}<b>${ps.length}</b></h4>${groups.length ? groups.map(([a, ns]) =>
-          `<div class="al"><span class="tag t${a}">${a} · ${ns.length}</span><ul>${ns.map(n => `<li title="${esc(n)}">${esc(n)}</li>`).join('')}</ul></div>`).join('') : '<p class="none" style="margin:0">Nobody yet</p>'}</div>`;
+        const sorted = ps.slice().sort((x, y) => ALLY.indexOf(x[1]) - ALLY.indexOf(y[1]) || x[0].localeCompare(y[0]));
+        return `<div class="opt${quiet(o) ? ' q' : ''}"><h4>${esc(o)}<b>${ps.length}</b></h4>${sorted.length ? `<ul class="names">${sorted.map(([n, a]) =>
+          `<li><span title="${esc(n)}">${esc(n)}</span><i class="tag t${esc(a)}">${esc(a)}</i></li>`).join('')}</ul>` : '<p class="none" style="margin:0">Nobody yet</p>'}</div>`;
       }).join('');
       const tally = ALLY.map(a => `<span class="t${a}">${a} ${e.counts[a] || 0}${e.cap ? ' / ' + e.cap : ''}</span>`).join('');
       return `<div class="card ev"><div class="evh"><div class="t"><h3>${esc(e.title)}</h3><div class="m">${e.closes ? (shut ? 'Closed ' : 'Closes ') + esc(when(e.closes)) : e.closed ? 'Closed' : 'No closing time'} · ${e.total} replied</div></div>
