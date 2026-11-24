@@ -46,8 +46,26 @@
       const p = (/^[0-9a-f]{16}$/.test(pid) && P.get(pid)) || P.get('s:' + fold(search));
       rows.push({ name: ign || search, search, ally, m: p ? p.m : {} });
     }
+    stamp(latest);
+    return latest;
+  }
+  function stamp(latest) {
     const pill = $('kzUpd');
     if (latest) { const d = new Date(latest); pill.hidden = false; pill.innerHTML = `Updated <span>${d.getDate()} ${d.toLocaleString('en-GB', { month: 'short' })}</span>`; }
+  }
+  const SAVE = 'kz:scores', FRESH = 10 * 60 * 1000;
+  let savedAt = 0;
+  function restore() {
+    try {
+      const v = JSON.parse(localStorage.getItem(SAVE));
+      if (!v || !Array.isArray(v.rows) || !Array.isArray(v.months)) return false;
+      rows = v.rows; months = v.months; savedAt = v.at || 0; stamp(v.latest);
+      return true;
+    } catch { return false; }
+  }
+  function save(latest) {
+    savedAt = Date.now();
+    try { localStorage.setItem(SAVE, JSON.stringify({ at: savedAt, latest, months, rows })); } catch {}
   }
   const fin = m => m ? m.s[2] : null;
   const LV = []; for (let l = 1, t = 0; l <= 100; l++) LV.push(t += [3, 4, 6, 8, 10, 12, 15, 18, 25, 30][Math.floor((l - 1) / 10)]);
@@ -120,13 +138,18 @@
   }
   const toEnd = () => { S.toEnd = true; draw(); };
   async function load(again) {
-    if ((rows && !again) || loading) return;
+    if (loading) return;
+    if (!rows && restore()) toEnd();
+    if (rows && !again && Date.now() - savedAt < FRESH) return;
     loading = true;
-    if (!rows) $('kzView').innerHTML = '<div class="rskel" aria-label="Loading">' + '<i></i>'.repeat(12) + '</div>';
+    const had = !!rows, before = had ? JSON.stringify([months, rows]) : '';
+    if (!had) $('kzView').innerHTML = '<div class="rskel" aria-label="Loading">' + '<i></i>'.repeat(12) + '</div>';
     try {
       const [a, b] = await Promise.all([CSV, ROSTER].map(u => fetch(u, { cache: 'no-store' }).then(r => { if (!r.ok) throw 0; return r.text(); })));
-      setup(a, b); toEnd();
-    } catch (e) { if (!rows) $('kzView').innerHTML = '<p class="rdim" style="padding:12px 14px">Could not load the scores. Try Reload.</p>'; }
+      const latest = setup(a, b);
+      save(latest);
+      if (!had) toEnd(); else if (JSON.stringify([months, rows]) !== before) draw();
+    } catch (e) { if (!had) $('kzView').innerHTML = '<p class="rdim" style="padding:12px 14px">Could not load the scores. Try Reload.</p>'; }
     loading = false;
   }
   $('kzChips').onclick = e => { const b = e.target.closest('[data-a]'); if (!b) return; S.ally = b.dataset.a; toEnd(); };

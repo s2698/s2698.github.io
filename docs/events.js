@@ -100,7 +100,13 @@
   try { use(JSON.parse(localStorage.getItem(CACHE))); } catch {}
   if (!data) list.innerHTML = '<p class="evnote">Loading…</p>';
   fetch(API + '/schedule', { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{}' })
-    .then(r => r.ok ? r.json() : null)
+    .then(r => r.ok ? r.text() : null)
+    .then(t => {
+      let d = null;
+      try { d = t ? JSON.parse(t) : null; } catch {}
+      if (d) try { localStorage.setItem('last:' + API + '/schedule', t); localStorage.setItem('lastat:' + API + '/schedule', String(Date.now())); } catch {}
+      return d;
+    })
     .then(d => {
       if (use(d)) { try { localStorage.setItem(CACHE, JSON.stringify(d)); } catch {} }
       else if (!data) list.innerHTML = '<p class="evnote">No events yet. Tap <b>Read events</b> in the bookmark, in the game, to add them.</p>';
