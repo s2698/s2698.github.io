@@ -276,7 +276,7 @@ button:disabled{opacity:.55;cursor:default}
   }
   async function matchTo(from, to, label, b) {
     if (b) b.disabled = true;
-    try { await call('su-match', { from, to }); toast(`Matched to ${label}`); await load(); } catch (x) { toast(x.message); if (b) b.disabled = false; }
+    try { const r = await call('su-match', { from, to }); toast(r.sheet === true ? `Matched to ${label}` : `Matched to ${label}, but the roster sheet wasn't updated: ${r.sheet}`); await load(); } catch (x) { toast(x.message); if (b) b.disabled = false; }
   }
   const past = e => e.shut && (!e.start || e.start + 6 * 3600e3 < Date.now());
   let tt;
