@@ -167,6 +167,15 @@ a.btn.pri{background:var(--acc);color:#fff}
 .pltab td{padding:7px 10px;border-top:1px solid var(--line);white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis}
 .pltab td.dimc{color:var(--dim)}
 .pltab tr.wl td{opacity:.7}
+.pltabs{display:flex;gap:4px;margin:0 0 10px;border-bottom:1px solid var(--line)}
+.pltabs button{border:0;border-bottom:3px solid transparent;border-radius:0;background:none;color:var(--dim);font-weight:700;padding:6px 12px}
+.pltabs button.on{color:var(--ink);border-bottom-color:var(--acc)}
+.lgk{display:flex;gap:6px;flex-wrap:wrap;margin:0 0 10px}
+.lgk .chip b{margin-left:4px;opacity:.7}
+.pltab td.lgw{white-space:normal;min-width:240px;max-width:420px}
+.lgw .nm{color:var(--cF);font-weight:700}
+.lgw .late{display:block;color:var(--bad);font-weight:700;font-size:12px}
+.lgw .by{display:block;color:var(--dim);font-size:12px}
 button.pri.bad{background:var(--bad);border-color:var(--bad)}
 [hidden]{display:none!important}
 </style>
@@ -276,6 +285,8 @@ button.pri.bad{background:var(--bad);border-color:var(--bad)}
 <div class="toast" id="toast"></div>
 <div class="dlg" id="pl" hidden><div class="dlgbox plbox" role="dialog" aria-modal="true" aria-labelledby="plt">
   <div class="row" style="margin:0 0 10px"><h3 id="plt" class="grow" style="margin:0"></h3><button type="button" class="sm" id="plx">Close</button></div>
+  <div class="pltabs" id="plv"><button type="button" class="on" data-v="p">Players</button><button type="button" data-v="a">Activity</button></div>
+  <div class="lgk" id="lgk" hidden></div>
   <input type="search" id="plq" placeholder="Search a name, nickname or username…">
   <p class="m" id="pln" style="margin:8px 0"></p>
   <div class="plwrap"><table class="pltab"><thead id="plh"></thead><tbody id="plb"></tbody></table></div>
@@ -336,11 +347,50 @@ button.pri.bad{background:var(--bad);border-color:var(--bad)}
       document.onkeydown = e => { if (e.key === 'Escape') $('dlgno').onclick(); };
     });
   }
-  let plEv = null;
+  let plEv = null, plView = 'p', lgLog = null, lgKind = 'all';
   function players(e) {
-    plEv = e; $('plt').textContent = e.title; $('plq').value = ''; drawPl(); $('pl').hidden = false; $('plq').focus();
+    plEv = e; plView = 'p'; lgLog = null; lgKind = 'all'; $('plt').textContent = e.title; $('plq').value = ''; drawPl(); $('pl').hidden = false; $('plq').focus();
+  }
+  const LGK = [['all', 'All'], ['cancel', 'Cancellations'], ['name', 'Name changes'], ['join', 'Sign-ups'], ['move', 'Switches & picks'], ['site', 'Officer changes']];
+  const lgIs = (x, k) => k === 'all' || (k === 'cancel' ? ['cancel', 'notme'].includes(x.k) : k === 'name' ? ['name', 'match'].includes(x.k) : k === 'join' ? ['join', 'add'].includes(x.k) : k === 'move' ? ['move', 'ans', 'promote'].includes(x.k) : x.by === 'site' || x.by === 'officer');
+  function lgWhat(x) {
+    const opt = `<b>${esc(x.w || '')}</b>`, picks = x.x ? ` (${esc(x.x)})` : '', was = esc(x.f || '');
+    const only = x.f && x.w && x.f.startsWith(x.w + ' · ') ? esc(x.f.slice(x.w.length + 3)) : was;
+    const t = {
+      join: x.wl ? `Joined the waitlist for ${opt}${picks}` : `Signed up for ${opt}${picks}`,
+      add: `An officer signed them up for ${opt}${picks}`,
+      move: x.by === 'site' ? `An officer moved them from ${was} to ${opt}${picks}` : `Switched from ${was} to ${opt}${picks}${x.wl ? ', and went on the waitlist' : ''}`,
+      ans: x.by === 'site' ? `An officer changed their picks from ${only} to ${esc(x.x || '')}` : `Changed their picks from ${only} to <b>${esc(x.x || '')}</b>`,
+      cancel: `Cancelled their ${opt} sign-up${picks}`,
+      notme: `Said the ${opt} sign-up wasn't them, so it was removed`,
+      remove: `An officer removed them from ${opt}${picks}`,
+      promote: `A spot opened up, so they moved off the waitlist into ${opt}`,
+      name: `Changed their name from <span class="nm">${was}</span> to <span class="nm">${esc(x.n)}</span>`,
+      match: `An officer matched <span class="nm">${was}</span> to <span class="nm">${esc(x.n)}</span> on the roster`,
+    }[x.k] || esc(x.k);
+    const h = plEv.start ? (plEv.start - x.t) / 36e5 : 0;
+    const late = ['cancel', 'notme'].includes(x.k) && h > 0 && h < 24 ? `<span class="late">${h < 1 ? 'Less than an hour' : Math.round(h) === 1 ? '1 hour' : Math.round(h) + ' hours'} before the start</span>` : '';
+    return t + late + (x.by === 'officer' ? '<span class="by">Done by an officer in Discord</span>' : '');
+  }
+  async function drawLog() {
+    const e = plEv, q = fold($('plq').value);
+    if (!lgLog) {
+      $('lgk').innerHTML = ''; $('pln').textContent = 'Loading…'; $('plh').innerHTML = ''; $('plb').innerHTML = '';
+      try { lgLog = (await call('su-log', { id: e.id })).log || []; } catch (err) { $('pln').textContent = err.message; return; }
+      if (plEv !== e || plView !== 'a') return;
+    }
+    $('lgk').innerHTML = LGK.map(([k, l]) => `<button type="button" class="chip${k === lgKind ? ' on' : ''}" data-k="${k}">${l}<b>${lgLog.filter(x => lgIs(x, k)).length}</b></button>`).join('');
+    const rows = lgLog.filter(x => lgIs(x, lgKind) && (!q || [x.n, x.f, x.dn, x.du].some(v => fold(v).includes(q)))).slice().reverse();
+    $('pln').textContent = lgLog.length ? (rows.length === lgLog.length ? `Showing all ${lgLog.length} changes` : `Showing ${rows.length} of ${lgLog.length} changes`) : 'No changes yet. Anything players or officers do from now on will show up here.';
+    $('plh').innerHTML = '<tr><th>When</th><th>Player</th><th>Alliance</th><th>What happened</th><th>Discord nickname</th><th>Discord username</th></tr>';
+    $('plb').innerHTML = rows.map(x => `<tr><td class="dimc">${esc(when(x.t))}</td><td title="${esc(x.n)}">${esc(x.n)}</td><td>${x.a ? `<i class="tag t${esc(x.a)}">${esc(x.a)}</i>` : ''}</td><td class="lgw">${lgWhat(x)}</td>
+      <td class="${x.dn ? '' : 'dimc'}">${x.site && !x.dn ? '<span class="m">Added on the site</span>' : esc(x.dn || '—')}</td><td class="${x.du ? '' : 'dimc'}">${esc(x.du || (x.site ? '' : '—'))}</td></tr>`).join('')
+      || (lgLog.length ? '<tr><td colspan="6" class="dimc">No changes match that.</td></tr>' : '');
   }
   function drawPl() {
+    document.querySelectorAll('#plv button').forEach(b => b.classList.toggle('on', b.dataset.v === plView));
+    $('lgk').hidden = plView !== 'a';
+    if (plView === 'a') return drawLog();
     const e = plEv, q = fold($('plq').value);
     const rows = sortP(e.list).sort((x, y) => x.o - y.o || x.w - y.w).filter(p => !q || [p.n, p.dn, p.du].some(v => fold(v).includes(q)));
     const qs = [...new Set(e.opts.flatMap(o => (o.qs || []).map(x => x.q)))];
@@ -354,6 +404,8 @@ button.pri.bad{background:var(--bad);border-color:var(--bad)}
       || `<tr><td colspan="${6 + qs.length}" class="dimc">Nobody matches.</td></tr>`;
   }
   $('plq').oninput = drawPl;
+  $('plv').onclick = e => { const b = e.target.closest('[data-v]'); if (b && b.dataset.v !== plView) { plView = b.dataset.v; drawPl(); } };
+  $('lgk').onclick = e => { const b = e.target.closest('[data-k]'); if (b) { lgKind = b.dataset.k; drawLog(); } };
   $('plx').onclick = () => { $('pl').hidden = true; };
   $('pl').onclick = e => { if (e.target === $('pl')) $('pl').hidden = true; };
   addEventListener('keydown', e => { if (e.key === 'Escape' && !$('pl').hidden) $('pl').hidden = true; });
@@ -413,7 +465,7 @@ button.pri.bad{background:var(--bad);border-color:var(--bad)}
       ${e.repeat && !hist ? `<span class="pill rep">↻ ${e.repeat === '2w' ? 'Every 2 weeks' : 'Every week'}</span>` : ''}${e.remind && e.start && !hist ? `<span class="pill rep">🔔 ${e.remind >= 60 ? e.remind / 60 + ' h' : e.remind + ' min'} before</span>` : ''}<span class="pill${e.shut ? ' off' : ''}">${hist ? 'Done' : e.shut ? 'Closed' : 'Open'}</span></div>
       <div class="tally">${tally}</div><div class="opts">${cols}</div>${!hist && ansEd && ansEd.id === e.id ? ansEditor(e) : ''}
       ${hist ? '' : `<div class="addp"><input type="text" list="rosterlist" placeholder="Add a player by name…" data-addname="${esc(e.id)}"><select data-addopt="${esc(e.id)}">${e.opts.map((o, k) => `<option value="${k}">${esc(o.label)}</option>`).join('')}</select>${btn('add', 'Add', 'pri')}<span class="m">Changes update the Discord post.</span></div>`}
-      <div class="evf">${btn('plist', 'Players')}${hist ? btn('again', 'Post again') + btn('csv', 'Download CSV') + btn('copy', 'Copy as text') + btn('del', 'Delete', 'danger')
+      <div class="evf">${btn('plist', 'Players &amp; activity')}${hist ? btn('again', 'Post again') + btn('csv', 'Download CSV') + btn('copy', 'Copy as text') + btn('del', 'Delete', 'danger')
         : btn('edit', 'Edit post') + btn('people', edits.has(e.id) ? 'Done' : 'Edit players') + btn('csv', 'Download CSV') + btn('copy', 'Copy as text') + (e.shut ? '' : btn('close', 'Close now')) + btn('del', 'Delete', 'danger')}</div></div>`;
   }
   function drawEvents() {
