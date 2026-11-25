@@ -155,6 +155,14 @@ button:disabled{opacity:.55;cursor:default}
 .dlgbox{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;width:100%;max-width:400px;box-shadow:0 20px 50px rgba(0,0,0,.35)}
 .dlgbox h3{margin:0 0 6px;font-size:16px}.dlgbox p{margin:0;color:var(--dim);font-size:13.5px}
 .dlgbox input{margin-top:12px}
+.plbox{max-width:980px;max-height:88vh;display:flex;flex-direction:column}
+.plbox input{margin-top:0}
+.plwrap{overflow:auto;flex:1;min-height:0;border:1px solid var(--line);border-radius:10px}
+.pltab{width:100%;border-collapse:collapse;font-size:13.5px}
+.pltab th{position:sticky;top:0;background:var(--head);text-align:left;font-size:11.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--dim);padding:8px 10px;white-space:nowrap}
+.pltab td{padding:7px 10px;border-top:1px solid var(--line);white-space:nowrap;max-width:240px;overflow:hidden;text-overflow:ellipsis}
+.pltab td.dimc{color:var(--dim)}
+.pltab tr.wl td{opacity:.7}
 button.pri.bad{background:var(--bad);border-color:var(--bad)}
 [hidden]{display:none!important}
 </style>
@@ -248,6 +256,12 @@ button.pri.bad{background:var(--bad);border-color:var(--bad)}
   </div>
 </div>
 <div class="toast" id="toast"></div>
+<div class="dlg" id="pl" hidden><div class="dlgbox plbox" role="dialog" aria-modal="true" aria-labelledby="plt">
+  <div class="row" style="margin:0 0 10px"><h3 id="plt" class="grow" style="margin:0"></h3><button type="button" class="sm" id="plx">Close</button></div>
+  <input type="search" id="plq" placeholder="Search a name, nickname or username…">
+  <p class="m" id="pln" style="margin:8px 0"></p>
+  <div class="plwrap"><table class="pltab"><thead id="plh"></thead><tbody id="plb"></tbody></table></div>
+</div></div>
 <div class="dlg" id="dlg" hidden><div class="dlgbox" role="dialog" aria-modal="true" aria-labelledby="dlgt"><h3 id="dlgt"></h3><p id="dlgp"></p><input type="text" id="dlgi" maxlength="60" hidden><div class="row" style="justify-content:flex-end;margin-top:14px"><button type="button" id="dlgno">Cancel</button><button type="button" class="pri" id="dlgok">OK</button></div></div></div>
 <script>
 (function () {
@@ -304,6 +318,27 @@ button.pri.bad{background:var(--bad);border-color:var(--bad)}
       document.onkeydown = e => { if (e.key === 'Escape') $('dlgno').onclick(); };
     });
   }
+  let plEv = null;
+  function players(e) {
+    plEv = e; $('plt').textContent = e.title; $('plq').value = ''; drawPl(); $('pl').hidden = false; $('plq').focus();
+  }
+  function drawPl() {
+    const e = plEv, q = fold($('plq').value);
+    const rows = sortP(e.list).sort((x, y) => x.o - y.o || x.w - y.w).filter(p => !q || [p.n, p.dn, p.du].some(v => fold(v).includes(q)));
+    const qs = [...new Set(e.opts.flatMap(o => (o.qs || []).map(x => x.q)))];
+    $('pln').textContent = `${rows.length} of ${e.list.length} players`;
+    $('plh').innerHTML = `<tr><th>Player</th><th>Alliance</th><th>Picked</th>${qs.map(t => `<th>${esc(t)}</th>`).join('')}<th>Discord nickname</th><th>Discord username</th><th>Signed up</th></tr>`;
+    $('plb').innerHTML = rows.map(p => { const o = e.opts[p.o] || {};
+      const ansOf = t => { const j = (o.qs || []).findIndex(x => x.q === t); return j < 0 ? '' : ((p.ans || [])[j] || []).map(k => o.qs[j].choices[k]).filter(Boolean).join(', '); };
+      return `<tr class="${p.w ? 'wl' : ''}"><td title="${esc(p.n)}">${esc(p.n)}</td><td>${atag(p)}</td><td>${o.emoji ? esc(o.emoji) + ' ' : ''}${esc(o.label || '')}${p.w ? ' <span class="m">(waitlist)</span>' : ''}</td>
+        ${qs.map(t => { const v = ansOf(t); return `<td class="${v ? '' : 'dimc'}" title="${esc(v)}">${esc(v || '—')}</td>`; }).join('')}
+        <td class="${p.dn ? '' : 'dimc'}">${p.site ? '<span class="m">Added on the site</span>' : esc(p.dn || '—')}</td><td class="${p.du ? '' : 'dimc'}">${p.site ? '' : esc(p.du || '—')}</td><td class="dimc">${p.at ? esc(when(p.at)) : ''}</td></tr>`; }).join('')
+      || `<tr><td colspan="${6 + qs.length}" class="dimc">Nobody matches.</td></tr>`;
+  }
+  $('plq').oninput = drawPl;
+  $('plx').onclick = () => { $('pl').hidden = true; };
+  $('pl').onclick = e => { if (e.target === $('pl')) $('pl').hidden = true; };
+  addEventListener('keydown', e => { if (e.key === 'Escape' && !$('pl').hidden) $('pl').hidden = true; });
   let tt;
   const toast = m => { const t = $('toast'); t.textContent = m; t.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('on'), 2600); };
   async function call(op, body) {
@@ -360,7 +395,7 @@ button.pri.bad{background:var(--bad);border-color:var(--bad)}
       ${e.repeat && !hist ? `<span class="pill rep">↻ ${e.repeat === '2w' ? 'Every 2 weeks' : 'Every week'}</span>` : ''}${e.remind && e.start && !hist ? `<span class="pill rep">🔔 ${e.remind >= 60 ? e.remind / 60 + ' h' : e.remind + ' min'} before</span>` : ''}<span class="pill${e.shut ? ' off' : ''}">${hist ? 'Done' : e.shut ? 'Closed' : 'Open'}</span></div>
       <div class="tally">${tally}</div><div class="opts">${cols}</div>${!hist && ansEd && ansEd.id === e.id ? ansEditor(e) : ''}
       ${hist ? '' : `<div class="addp"><input type="text" list="rosterlist" placeholder="Add a player by name…" data-addname="${esc(e.id)}"><select data-addopt="${esc(e.id)}">${e.opts.map((o, k) => `<option value="${k}">${esc(o.label)}</option>`).join('')}</select>${btn('add', 'Add', 'pri')}<span class="m">Changes update the Discord post.</span></div>`}
-      <div class="evf">${hist ? btn('again', 'Post again') + btn('csv', 'Download CSV') + btn('copy', 'Copy as text') + btn('del', 'Delete', 'danger')
+      <div class="evf">${btn('plist', 'Players')}${hist ? btn('again', 'Post again') + btn('csv', 'Download CSV') + btn('copy', 'Copy as text') + btn('del', 'Delete', 'danger')
         : btn('edit', 'Edit post') + btn('people', edits.has(e.id) ? 'Done' : 'Edit players') + btn('csv', 'Download CSV') + btn('copy', 'Copy as text') + (e.shut ? '' : btn('close', 'Close now')) + btn('del', 'Delete', 'danger')}</div></div>`;
   }
   function drawEvents() {
@@ -401,7 +436,8 @@ button.pri.bad{background:var(--bad);border-color:var(--bad)}
   }
   async function listClick(e) {
     const b = e.target.closest('button'); if (!b) return;
-    const d = b.dataset, id = d.edit || d.people || d.csv || d.copy || d.close || d.del || d.again || d.add || d.rm || d.aed || d.asave || d.acancel, ev = byId(id);
+    const d = b.dataset, id = d.edit || d.people || d.csv || d.copy || d.close || d.del || d.again || d.add || d.rm || d.aed || d.asave || d.acancel || d.plist, ev = byId(id);
+    if (d.plist) return players(ev);
     if (!ev) return;
     if (d.people) { edits.has(id) ? edits.delete(id) : edits.add(id); drawEvents(); roster(); }
     if (d.csv) csv(ev);
