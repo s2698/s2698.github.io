@@ -111,6 +111,7 @@ button:disabled{opacity:.55;cursor:default}
 .emb img{width:100%;border-radius:6px;margin-top:8px;display:block}
 .ef{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 12px;margin-top:8px}
 .ef b{font-size:13px;display:block;color:#fff;margin-bottom:2px}.ef div{font-size:13px}
+.ef1{margin-top:8px;font-size:13px}.ef1 b{color:#fff;display:block}
 .ef .qb{border-left:4px solid #4e5058;border-radius:2px;padding-left:9px}
 .emb .ts{background:rgba(255,255,255,.08);border-radius:3px;padding:0 2px}
 .efoot{font-size:12px;color:#949ba4;margin-top:8px}
@@ -508,11 +509,13 @@ button.pri.bad{background:var(--bad);border-color:var(--bad)}
       ${f.roles.length && !editing ? `<div>${f.roles.map(r => `<span class="ping">${esc(roleName(r))}</span>`).join(' ')}</div>` : ''}
       <div class="emb" style="border-left-color:${esc(cur.color)}"><h3>${esc(f.title || 'Event title')}</h3>
       ${f.details ? `<p>${esc(f.details)}</p>` : ''}${info.length ? `<p>${info.join('<br>')}</p>` : ''}
-      <div class="ef">${colsOf({ opts, list: ev ? ev.list : [] }).map(c => `<div><b>${esc(c.name)} (${c.ps.length}${c.max ? '/' + c.max : ''})</b>${c.ps.length ? `<div class="qb">${c.ps.map(p => { const t = ansText(opts[c.i], p.ans, c.skip); return esc(p.n + (t ? ' · ' + t : '')); }).join('<br>')}</div>` : '—'}</div>`).join('')}</div>
+      ${(() => { const all = colsOf({ opts, list: ev ? ev.list : [] }), rows = Math.ceil(all.length / 3) || 1, out = []; let at = 0;
+        for (let k = 0; k < rows; k++) { const n = Math.floor(all.length / rows) + (k < all.length % rows ? 1 : 0); out.push(all.slice(at, at + n)); at += n; }
+        return out.map(row => `<div class="ef">${row.map(c => `<div><b>${esc(c.name)} (${c.ps.length}${c.max ? '/' + c.max : ''})</b>${c.ps.length ? `<div class="qb">${c.ps.map(p => { const t = ansText(opts[c.i], p.ans, c.skip); return esc(p.n + (t ? ' · ' + t : '')); }).join('<br>')}</div>` : '—'}</div>`).join('')}</div>`).join(''); })()}
       ${/^https:\/\//i.test(f.image) ? `<img src="${esc(f.image)}" alt="" onerror="this.remove()">` : ''}
       <div class="efoot">Signed up: ${ALLY.map(a => `${a} ${ev ? ev.counts[a] || 0 : 0}${f.cap ? '/' + f.cap : ''}`).join(' · ')}</div></div>
-      <div class="dbtns">${opts.map((o, i) => `<span class="${{ green: 'g', blue: 'b', grey: 'gr', red: 'r' }[o.style] || (!o.counts ? 'gr' : i === 0 ? 'g' : 'b')}">${esc((o.emoji ? o.emoji + ' ' : '') + o.label)}</span>`).join('')}</div>
-      <div class="dbtns"><span class="r">Cancel sign-up</span></div></div></div>`;
+      <div class="dbtns">${opts.map((o, i) => `<span class="${{ green: 'g', blue: 'b', grey: 'gr', red: 'r' }[o.style] || (!o.counts ? 'gr' : i === 0 ? 'g' : 'b')}">${esc((o.emoji ? o.emoji + ' ' : '') + o.label)}</span>`).join('')}${opts.length < 5 ? '<span class="r">Cancel sign-up</span>' : ''}</div>
+      ${opts.length < 5 ? '' : '<div class="dbtns"><span class="r">Cancel sign-up</span></div>'}</div></div>`;
   }
   $('post').onclick = async () => {
     const f = form(), b = $('post');
