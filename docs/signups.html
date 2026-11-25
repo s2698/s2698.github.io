@@ -110,7 +110,9 @@ button:disabled{opacity:.55;cursor:default}
 .emb p{margin:0 0 6px;font-size:13.5px;white-space:pre-wrap;overflow-wrap:anywhere}
 .emb img{width:100%;border-radius:6px;margin-top:8px;display:block}
 .ef{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 12px;margin-top:8px}
-.ef b{font-size:13px;display:block;color:#fff}.ef div{font-size:13px}
+.ef b{font-size:13px;display:block;color:#fff;margin-bottom:2px}.ef div{font-size:13px}
+.ef .qb{border-left:4px solid #4e5058;border-radius:2px;padding-left:9px}
+.emb .ts{background:rgba(255,255,255,.08);border-radius:3px;padding:0 2px}
 .efoot{font-size:12px;color:#949ba4;margin-top:8px}
 .dbtns{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
 .dbtns span{font-size:13.5px;font-weight:500;color:#fff;border-radius:4px;padding:6px 12px}
@@ -148,6 +150,11 @@ button:disabled{opacity:.55;cursor:default}
 .code{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:var(--head);border-radius:6px;padding:1px 6px}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:999px;font-weight:600;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9;max-width:90vw;text-align:center}
 .toast.on{opacity:1}
+.dlg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
+.dlgbox{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;width:100%;max-width:400px;box-shadow:0 20px 50px rgba(0,0,0,.35)}
+.dlgbox h3{margin:0 0 6px;font-size:16px}.dlgbox p{margin:0;color:var(--dim);font-size:13.5px}
+.dlgbox input{margin-top:12px}
+button.pri.bad{background:var(--bad);border-color:var(--bad)}
 [hidden]{display:none!important}
 </style>
 </head>
@@ -193,6 +200,7 @@ button:disabled{opacity:.55;cursor:default}
             <label>When an option or alliance is full<select id="f-full"><option value="wl">Waitlist (moves up automatically)</option><option value="stop">Stop sign-ups</option></select></label>
             <div class="sec">When</div>
             <label>Event starts <small>optional</small><input type="datetime-local" id="f-start"></label>
+            <label>Length <small>shows the time range in the post</small><select id="f-dur"><option value="0">Not set</option><option value="15">15 min</option><option value="30">30 min</option><option value="45">45 min</option><option value="60">1 hour</option><option value="90">1½ hours</option><option value="120">2 hours</option><option value="180">3 hours</option><option value="240">4 hours</option><option value="360">6 hours</option></select></label>
             <label>Sign-ups close <small>optional · the buttons grey out then</small><input type="datetime-local" id="f-close"></label>
             <label>Reminder <small>needs a start time</small><select id="f-rem"><option value="0">No reminder</option><option value="15">15 min before the start</option><option value="30">30 min before the start</option><option value="60">1 hour before the start</option><option value="120">2 hours before the start</option><option value="180">3 hours before the start</option></select></label>
             <label>Repeat <small>the next one is posted when this one starts</small><select id="f-rep"><option value="">Once</option><option value="w">Every week</option><option value="2w">Every 2 weeks</option></select></label>
@@ -239,6 +247,7 @@ button:disabled{opacity:.55;cursor:default}
   </div>
 </div>
 <div class="toast" id="toast"></div>
+<div class="dlg" id="dlg" hidden><div class="dlgbox" role="dialog" aria-modal="true" aria-labelledby="dlgt"><h3 id="dlgt"></h3><p id="dlgp"></p><input type="text" id="dlgi" maxlength="60" hidden><div class="row" style="justify-content:flex-end;margin-top:14px"><button type="button" id="dlgno">Cancel</button><button type="button" class="pri" id="dlgok">OK</button></div></div></div>
 <script>
 (function () {
   const API = location.hostname.endsWith('.workers.dev') ? '/api' : 'https://data-collection.jk06nm04.workers.dev/api';
@@ -279,6 +288,21 @@ button:disabled{opacity:.55;cursor:default}
     try { const r = await call('su-match', { from, to }); toast(r.sheet === true ? `Matched to ${label}` : `Matched to ${label}, but the roster sheet wasn't updated: ${r.sheet}`); await load(); } catch (x) { toast(x.message); if (b) b.disabled = false; }
   }
   const past = e => e.shut && (!e.start || e.start + 6 * 3600e3 < Date.now());
+  function ask({ title, text = '', ok = 'OK', danger = false, input = null }) {
+    return new Promise(done => {
+      const d = $('dlg'), i = $('dlgi');
+      $('dlgt').textContent = title; $('dlgp').textContent = text; $('dlgp').hidden = !text;
+      $('dlgok').textContent = ok; $('dlgok').classList.toggle('bad', danger);
+      i.hidden = input == null; if (input != null) i.value = input;
+      d.hidden = false; (input != null ? i : $('dlgok')).focus();
+      const end = v => { d.hidden = true; $('dlgok').onclick = $('dlgno').onclick = d.onclick = i.onkeydown = document.onkeydown = null; done(v); };
+      $('dlgok').onclick = () => end(input != null ? i.value.trim() || null : true);
+      $('dlgno').onclick = () => end(input != null ? null : false);
+      d.onclick = e => { if (e.target === d) $('dlgno').onclick(); };
+      i.onkeydown = e => { if (e.key === 'Enter') $('dlgok').onclick(); };
+      document.onkeydown = e => { if (e.key === 'Escape') $('dlgno').onclick(); };
+    });
+  }
   let tt;
   const toast = m => { const t = $('toast'); t.textContent = m; t.classList.add('on'); clearTimeout(tt); tt = setTimeout(() => t.classList.remove('on'), 2600); };
   async function call(op, body) {
@@ -399,7 +423,7 @@ button:disabled{opacity:.55;cursor:default}
       const ne = byId(id); if (ne && ne.opts[opt] && ne.opts[opt].qs && ne.list.some(x => x.s === hit[2])) { ansEd = { id, s: hit[2] }; drawEvents(); }
     }
     if (d.close) { b.disabled = true; try { await call('su-close', { id }); toast('Sign-ups closed'); load(); } catch (x) { toast(x.message); b.disabled = false; } }
-    if (d.del && confirm(`Delete “${ev.title}” and its Discord post${ev.posts.length > 1 ? 's' : ''}? This cannot be undone.`)) {
+    if (d.del && await ask({ title: `Delete “${ev.title}”?`, text: `This also deletes its Discord post${ev.posts.length > 1 ? 's' : ''}. It can't be undone.`, ok: 'Delete', danger: true })) {
       b.disabled = true; try { await call('su-remove', { id }); toast('Deleted'); load(); } catch (x) { toast(x.message); b.disabled = false; }
     }
   }
@@ -417,13 +441,13 @@ button:disabled{opacity:.55;cursor:default}
   $('evlist').onchange = e => { const s = e.target.closest('[data-mv]'); if (s) player(s.dataset.mv, { act: 'move', search: s.dataset.s, opt: Number(s.value) }, 'Moved'); };
   $('hq').oninput = drawHist;
 
-  function blank() { return { title: '', details: '', opts: [{ emoji: '', label: 'Sign up', max: 0, counts: true, style: '' }], cap: 0, start: 0, closes: 0, chans: [], roles: [], color: 0xe0457b, image: '', remind: 0, repeat: '', full: 'wl' }; }
+  function blank() { return { title: '', details: '', opts: [{ emoji: '', label: 'Sign up', max: 0, counts: true, style: '' }], cap: 0, start: 0, closes: 0, chans: [], roles: [], color: 0xe0457b, image: '', remind: 0, repeat: '', full: 'wl', dur: 0 }; }
   function fill(src, edit) {
     editing = edit ? src.id : null;
     cur = { opts: src.opts.map(o => ({ ...o, qs: (o.qs || []).map(q => ({ ...q, choices: Array.isArray(q.choices) ? q.choices.join(', ') : q.choices || '' })) })), chans: src.chans.slice(), roles: (src.roles || []).slice(), color: hex(src.color), tpl: src.name ? src.id : null };
     $('f-title').value = src.title || ''; $('f-details').value = src.details || ''; $('f-cap').value = src.cap || '';
     $('f-start').value = local(src.start); $('f-close').value = local(src.closes); $('f-img').value = src.image || '';
-    $('f-rem').value = String(src.remind || 0); $('f-rep').value = src.repeat || ''; $('f-full').value = src.full || 'wl';
+    $('f-rem').value = String(src.remind || 0); $('f-dur').value = String(src.dur || 0); $('f-rep').value = src.repeat || ''; $('f-full').value = src.full || 'wl';
     $('formTitle').textContent = edit ? 'Edit post' : 'New event';
     $('formHint').textContent = edit ? 'Changes update the post in Discord. Adding a channel posts it there too; removing one deletes that post.' : 'Start from a template or from scratch. The preview shows how the post will look in Discord.';
     $('post').textContent = edit ? 'Update post' : 'Post to Discord';
@@ -464,27 +488,27 @@ button:disabled{opacity:.55;cursor:default}
     if (r) { cur.roles = tog(cur.roles, r); drawForm(); }
     if (k) { cur.color = k; drawForm(); }
   });
-  ['f-title', 'f-details', 'f-cap', 'f-start', 'f-close', 'f-img', 'f-rem', 'f-rep', 'f-full'].forEach(id => { $(id).addEventListener('input', preview); $(id).addEventListener('change', preview); });
+  ['f-title', 'f-details', 'f-cap', 'f-start', 'f-close', 'f-img', 'f-rem', 'f-rep', 'f-full', 'f-dur'].forEach(id => { $(id).addEventListener('input', preview); $(id).addEventListener('change', preview); });
   function form() {
     const ms = v => v ? new Date(v).getTime() : 0;
     return { title: $('f-title').value.trim(), details: $('f-details').value.trim(), opts: cur.opts.map(({ emoji, label, max, counts, style, qs }) => ({ emoji: (emoji || '').trim(), label: label.trim(), max, counts, style: style || '',
         qs: (qs || []).map(q => ({ q: (q.q || '').trim(), choices: String(q.choices || '').split(',').map(c => c.trim()).filter(Boolean), multi: !!q.multi, max: q.max || 0, cols: !!q.cols })).filter(q => q.choices.length) })).filter(o => o.label),
       cap: Number($('f-cap').value) || 0, start: ms($('f-start').value), closes: ms($('f-close').value), chans: cur.chans, roles: cur.roles, color: cur.color, image: $('f-img').value.trim(),
-      remind: Number($('f-rem').value) || 0, repeat: $('f-rep').value, full: $('f-full').value };
+      remind: Number($('f-rem').value) || 0, dur: Number($('f-dur').value) || 0, repeat: $('f-rep').value, full: $('f-full').value };
   }
   function preview() {
     const f = form(), opts = f.opts.length ? f.opts : [{ label: 'Sign up', emoji: '', counts: true }];
     const ev = editing && byId(editing);
     const n = i => ev ? ev.list.filter(p => p.o === i && !p.w).length : 0;
-    const info = [f.start ? `🕑 <b>Starts</b> ${esc(long(f.start))} <span style="color:#949ba4">(shown in each player's time zone)</span>` : '', f.closes ? `🔒 Sign-ups close ${esc(long(f.closes))}` : '', f.cap ? `👥 Max ${f.cap} per alliance` : '',
-      f.remind && f.start ? `🔔 Reminder ${f.remind >= 60 ? f.remind / 60 + ' h' : f.remind + ' min'} before the start` : '', f.repeat ? `↻ Repeats every ${f.repeat === '2w' ? '2 weeks' : 'week'}` : '',
-      f.full === 'wl' && (f.cap || f.opts.some(o => o.max)) ? '⏳ When full, you go on a waitlist' : ''].filter(Boolean);
+    const hm = t => new Date(t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    const days = f.start ? Math.round((f.start - Date.now()) / 864e5) : 0;
+    const info = f.start ? [`<b>Time</b>`, `<span class="ts">${esc(long(f.start))}</span>${f.dur ? ` - <span class="ts">${esc(hm(f.start + f.dur * 60e3))}</span>` : ''}`, `🕑 <span class="ts">${days > 1 ? `in ${days} days` : days === 1 ? 'tomorrow' : days === 0 ? 'today' : `${-days} days ago`}</span>`] : [];
     $('preview').innerHTML = `<div class="top"># ${esc(f.chans.length ? chName(f.chans[0]).slice(1) : 'pick-a-channel')}${f.chans.length > 1 ? ` · and ${f.chans.length - 1} more` : ''}</div>
       <div class="msg"><div class="av">2698</div><div style="min-width:0;flex:1"><div class="who">2698 Bot<span class="bt">BOT</span></div>
       ${f.roles.length && !editing ? `<div>${f.roles.map(r => `<span class="ping">${esc(roleName(r))}</span>`).join(' ')}</div>` : ''}
       <div class="emb" style="border-left-color:${esc(cur.color)}"><h3>${esc(f.title || 'Event title')}</h3>
       ${f.details ? `<p>${esc(f.details)}</p>` : ''}${info.length ? `<p>${info.join('<br>')}</p>` : ''}
-      <div class="ef">${colsOf({ opts, list: ev ? ev.list : [] }).map(c => `<div><b>${esc(c.name)} · ${c.ps.length}${c.max ? '/' + c.max : ''}</b>${c.ps.map(p => { const t = ansText(opts[c.i], p.ans, c.skip); return esc(p.n + (t ? ' · ' + t : '')); }).join('<br>') || '—'}</div>`).join('')}</div>
+      <div class="ef">${colsOf({ opts, list: ev ? ev.list : [] }).map(c => `<div><b>${esc(c.name)} (${c.ps.length}${c.max ? '/' + c.max : ''})</b>${c.ps.length ? `<div class="qb">${c.ps.map(p => { const t = ansText(opts[c.i], p.ans, c.skip); return esc(p.n + (t ? ' · ' + t : '')); }).join('<br>')}</div>` : '—'}</div>`).join('')}</div>
       ${/^https:\/\//i.test(f.image) ? `<img src="${esc(f.image)}" alt="" onerror="this.remove()">` : ''}
       <div class="efoot">Signed up: ${ALLY.map(a => `${a} ${ev ? ev.counts[a] || 0 : 0}${f.cap ? '/' + f.cap : ''}`).join(' · ')}</div></div>
       <div class="dbtns">${opts.map((o, i) => `<span class="${{ green: 'g', blue: 'b', grey: 'gr', red: 'r' }[o.style] || (!o.counts ? 'gr' : i === 0 ? 'g' : 'b')}">${esc((o.emoji ? o.emoji + ' ' : '') + o.label)}</span>`).join('')}</div>
@@ -504,7 +528,7 @@ button:disabled{opacity:.55;cursor:default}
   };
   $('saveTpl').onclick = async () => {
     const was = cur.tpl && TPL.find(t => t.id === cur.tpl);
-    const name = prompt(was ? 'Template name (keep it to update this template)' : 'Template name', was ? was.name : $('f-title').value.trim());
+    const name = await ask({ title: 'Save as template', text: was ? 'Keep the name to update this template, or type a new one.' : 'Give the template a name.', ok: 'Save', input: was ? was.name : $('f-title').value.trim() });
     if (!name) return;
     try { const r = await call('su-tpl-save', { ...form(), name, tid: was && was.name === name ? was.id : '' }); cur.tpl = r.tpl.id; await loadTpls(); toast('Template saved'); }
     catch (x) { toast(x.message); }
@@ -517,7 +541,7 @@ button:disabled{opacity:.55;cursor:default}
   $('tpllist').onclick = async e => {
     const u = e.target.dataset.use, d = e.target.dataset.tdel;
     if (u) { const t = TPL.find(x => x.id === u); fill(t, false); cur.tpl = t.id; drawForm(); show('new'); }
-    if (d && confirm('Delete this template?')) { try { await call('su-tpl-del', { tid: d }); await loadTpls(); toast('Template deleted'); } catch (x) { toast(x.message); } }
+    if (d && await ask({ title: 'Delete this template?', text: 'Events already posted from it stay as they are.', ok: 'Delete', danger: true })) { try { await call('su-tpl-del', { tid: d }); await loadTpls(); toast('Template deleted'); } catch (x) { toast(x.message); } }
   };
 
   function drawSettings() {
