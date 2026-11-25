@@ -151,6 +151,10 @@ button:disabled{opacity:.55;cursor:default}
 .code{font-family:ui-monospace,Menlo,monospace;font-size:12.5px;background:var(--head);border-radius:6px;padding:1px 6px}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--bg);padding:8px 14px;border-radius:999px;font-weight:600;font-size:13px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9;max-width:90vw;text-align:center}
 .toast.on{opacity:1}
+.steps{margin:0 0 14px;padding-left:20px;font-size:13.5px}.steps li{margin:3px 0}
+a.btn{display:inline-block;text-decoration:none;font-weight:600;border-radius:8px;padding:8px 14px}
+a.btn.pri{background:var(--acc);color:#fff}
+.perms{margin-top:12px;font-size:13px}.perms summary{cursor:pointer;color:var(--dim)}.perms ul{margin:8px 0 0;padding-left:20px}
 .dlg{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:16px;z-index:20}
 .dlgbox{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:18px;width:100%;max-width:400px;box-shadow:0 20px 50px rgba(0,0,0,.35)}
 .dlgbox h3{margin:0 0 6px;font-size:16px}.dlgbox p{margin:0;color:var(--dim);font-size:13.5px}
@@ -234,6 +238,20 @@ button.pri.bad{background:var(--bad);border-color:var(--bad)}
       <div id="histlist"></div>
     </section>
     <section data-p="settings" hidden>
+      <div class="card">
+        <h2>Add the bot</h2>
+        <p class="hint">Adds the sign-up bot to a Discord server. You need the Manage Server permission on that server.</p>
+        <ol class="steps">
+          <li>Press <b>Add the bot to a server</b>. Discord opens in a new tab.</li>
+          <li>Pick the server and press <b>Continue</b>, then <b>Authorise</b>. The permissions are already ticked.</li>
+          <li>Come back here and press <b>Load from Discord</b> below.</li>
+        </ol>
+        <div class="row"><a class="btn pri" id="invite" href="https://discord.com/oauth2/authorize?client_id=1574856506199908442&scope=bot%20applications.commands&permissions=216064" target="_blank" rel="noopener">Add the bot to a server</a><span class="m" id="botin"></span></div>
+        <details class="perms"><summary>What the bot can do</summary><ul>
+          <li>See channels and read the history of the ones it posts in</li><li>Send messages with embeds (the sign-up posts)</li>
+          <li>Mention roles and @everyone, only when you tick them on New event</li><li>Add the /signups and /mysignups commands</li></ul>
+          <p class="m" style="margin:6px 0 0">It can't kick, ban, delete other people's messages or change server settings.</p></details>
+      </div>
       <div class="card">
         <h2>Discord server</h2>
         <p class="hint">The bot reads your server's channels and roles. Tick the ones to offer on New event.</p>
@@ -585,6 +603,7 @@ button.pri.bad{background:var(--bad);border-color:var(--bad)}
 
   function drawSettings() {
     $('cfgat').textContent = CFG ? `${CFG.name || 'Server'} · loaded ${when(CFG.at)}` : '';
+    $('botin').textContent = CFG && CFG.guilds && CFG.guilds.length ? `Already in: ${CFG.guilds.map(g => g.name).join(', ')}` : '';
     $('guildbox').hidden = !(CFG && CFG.guilds && CFG.guilds.length > 1);
     if (CFG && CFG.guilds) $('guild').innerHTML = CFG.guilds.map(g => `<option value="${g.id}"${g.id === CFG.guild ? ' selected' : ''}>${esc(g.name)}</option>`).join('');
     $('setchans').innerHTML = CFG ? CFG.channels.map(c => `<span class="chip${c.on ? ' on' : ''}" data-sc="${c.id}">#${esc(c.name)}</span>`).join('') : '<span class="m">Load from Discord first.</span>';
