@@ -20,6 +20,7 @@ if (location.hash === '#signups') location.replace('signups.html');
 try { const s = JSON.parse(localStorage.getItem('site.settings')); if (!(s && s.cards && s.cards.ma && s.home && s.home.cards && s.home.cards.length)) throw 0; }
 catch { document.documentElement.classList.add('homewait'); setTimeout(() => document.documentElement.classList.remove('homewait'), 4000); }
 document.documentElement.classList.toggle('evonly', location.hash === '#events');
+try { const nav = performance.getEntriesByType('navigation')[0], back = nav && /reload|back_forward/.test(nav.type); if (back || sessionStorage.getItem('home.seen')) document.documentElement.classList.add('calm'); sessionStorage.setItem('home.seen', '1'); } catch {}
 if (!/^#(roster|whitebeard|snowtrain|energytower|mammoth|frost|nc|player|stormduel|fame|points|kartzscores|practice|admin)$/.test(location.hash)) document.documentElement.classList.add('athome');
 else document.documentElement.dataset.view = location.hash.slice(1);
 </script>
@@ -191,6 +192,7 @@ html[data-view=frost] #app,body:has(#tab-frost:not(.hide)) #app,html[data-view=n
 .bandinner{position:relative;width:100%;max-width:960px;margin:0 auto;padding:0 16px}
 .bandtitle{display:inline-block;margin:0;padding-right:.15em;font:400 42px/1.2 Satisfy,cursive;color:#fff;text-shadow:0 0 14px rgba(255,92,154,.45)}
 .bandtitle{clip-path:inset(0 100% 0 0)}
+.calm #home:not(.writing) .bandtitle{clip-path:none}
 .writing .bandtitle{animation:writeIn 1.5s cubic-bezier(.45,.05,.35,1) .15s both}
 .writing .bandinner::after{content:"";position:absolute;top:50%;left:16px;width:10px;height:10px;margin-top:-5px;border-radius:50%;background:#fff;
   box-shadow:0 0 10px #fff,0 0 22px #ff5c9a;opacity:0;animation:nib 1.5s cubic-bezier(.45,.05,.35,1) .15s both}
@@ -784,12 +786,14 @@ tr.det td{padding:0!important;background:var(--tcell)!important;position:static!
     home.classList.remove('cardsin'); void home.offsetWidth; home.classList.add('cardsin');
   }
   const go = () => setTimeout(() => { if (atHome()) { cards(); write(); } });
-  if (atHome()) cards();
+  const calm = document.documentElement.classList.contains('calm');
+  if (atHome() && !calm) cards();
   const font = document.fonts ? document.fonts.load('42px Satisfy').catch(() => {}) : Promise.resolve();
   let shown = false;
-  Promise.race([font, new Promise(r => setTimeout(r, 2500))]).then(() => setTimeout(() => { shown = true; if (atHome()) write(); }));
+  Promise.race([font, new Promise(r => setTimeout(r, 2500))]).then(() => setTimeout(() => { shown = true; if (atHome() && !calm) write(); }));
   addEventListener('hashchange', () => document.documentElement.classList.toggle('evonly', location.hash === '#events'));
-  addEventListener('viewchange', () => { if (shown) go(); });
+  let boot = true;
+  addEventListener('viewchange', () => { if (boot) { boot = false; return; } if (shown) go(); });
 })();
 </script>
 
